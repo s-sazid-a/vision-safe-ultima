@@ -1,0 +1,41 @@
+{
+    "safe_model": {
+        "name": "safe_detector.pt",
+        "version": "1.0.0",
+        "architecture": "YOLOv8m",
+        "classes": [
+            "person_walking",
+            "person_sitting",
+            "person_standing",
+            "person_yoga"
+        ],
+        "training_date": "2026-02-09",
+        "epochs": 50,
+        "mAP50_validation": 0.893,
+        "mAP50_test": 0.63,
+        "size_mb": 52
+    },
+    "unsafe_model": {
+        "name": "unsafe_detector.pt",
+        "version": "1.0.0",
+        "architecture": "YOLOv8m",
+        "classes": [
+            "fire",
+            "vehicle_car",
+            "vehicle_motorbike"
+        ],
+        "training_date": "2026-02-09",
+        "epochs": 16,
+        "mAP50_test": 0.64,
+        "size_mb": 156,
+        "note": "Training interrupted at 40% completion due to time constraints"
+    },
+    "deployment_date": "2026-02-10",
+    "inference_config": {
+        "device": "cuda",
+        "conf_threshold": 0.5,
+        "iou_threshold": 0.45,
+        "temporal_smoothing": true,
+        "smoothing_window": 5
+    }
+}

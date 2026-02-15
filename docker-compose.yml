@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  # Backend API
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: vision_safe_backend
+    ports:
+      - "8000:8000"
+    environment:
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - DEBUG_MODE=false
+      - LOG_LEVEL=INFO
+      - ML_DEVICE=cpu
+      - ML_CONF_THRESHOLD=0.5
+      - ML_ENABLE_TEMPORAL_SMOOTHING=true
+      - FRONTEND_URL=http://localhost:5173
+      - FRONTEND_PROD_URL=https://yourdomain.com
+    volumes:
+      - ./vision_safe_ultima_backend_v2.0/models:/app/models:ro
+      - ./vision_safe_ultima_backend_v2.0/.env:/app/.env:ro
+    networks:
+      - vision_safe_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend Web App
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: vision_safe_frontend
+    ports:
+      - "80:80"
+    environment:
+      - VITE_WS_URL=ws://localhost:8000/ws/stream
+      - VITE_API_URL=http://localhost:8000
+    networks:
+      - vision_safe_network
+    depends_on:
+      - backend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  vision_safe_network:
+    driver: bridge
+
+volumes:
+  models:
