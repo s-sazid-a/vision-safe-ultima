@@ -90,7 +90,7 @@ async def update_subscription_tier(
         # Check if user exists
         user_check = await db.fetch_one("SELECT id FROM users WHERE id = ?", (current_user['id'],))
         if not user_check:
-            # COPY PASTE AUTO-SYNC LOGIC (Refactor would be better but keeping it robust here)
+            # COPY PASTE AUTO-SYNC LOGIC
             email = current_user.get('email')
             if not email:
                 emails = current_user.get('emails', [])
@@ -99,13 +99,19 @@ async def update_subscription_tier(
             
             if email:
                 full_name = current_user.get('name') or current_user.get('full_name') or email.split('@')[0]
-                await db.execute(
-                    """
-                    INSERT INTO users (id, email, full_name, subscription_tier, account_status)
-                    VALUES (?, ?, ?, ?, 'active')
-                    """,
-                    (current_user['id'], email, full_name, 'trial') # Create as trial first
-                )
+                try:
+                    await db.execute(
+                        """
+                        INSERT INTO users (id, email, full_name, subscription_tier, account_status)
+                        VALUES (?, ?, ?, ?, 'active')
+                        """,
+                        (current_user['id'], email, full_name, 'trial')
+                    )
+                except Exception as insert_err:
+                    # Ignore unique constraint (race condition), log others
+                    if "UNIQUE" not in str(insert_err) and "constraint" not in str(insert_err):
+                        logger.error(f"Auto-create failed: {insert_err}")
+                        # Don't raise, try update anyway
 
         await db.execute(
             "UPDATE users SET subscription_tier = ? WHERE id = ?",
@@ -114,4 +120,5 @@ async def update_subscription_tier(
         return {"message": f"Subscription updated to {update.tier}"}
     except Exception as e:
         logger.error(f"Error updating subscription: {e}")
-        raise HTTPException(status_code=500, detail="Internal Server Error")
+        # RETURN THE REAL ERROR TO FRONTEND
+        raise HTTPException(status_code=500, detail=f"Update failed: {str(e)}")
