@@ -36,7 +36,7 @@ async def get_current_user_details(current_user: dict = Depends(get_current_user
             id=user['id'],
             email=user['email'],
             full_name=user['full_name'],
-            subscription_tier=user['subscription_tier'],
+            subscription_tier='enterprise', # FORCE UNLOCK: All users are Enterprise
             account_status=user['account_status']
         )
     except Exception as e:

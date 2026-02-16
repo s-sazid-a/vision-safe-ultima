@@ -68,8 +68,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             let subscription_tier: Account['subscription_tier'] = 'trial';
 
             if (userRes.ok) {
-                const userData = await userRes.json();
-                subscription_tier = userData.subscription_tier;
+                await userRes.json(); // Consume body
+                subscription_tier = 'enterprise'; // FORCE UNLOCK: All users are Enterprise
             }
 
             // 2. Fetch Profiles
@@ -141,19 +141,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (!account) return;
 
         // Subscription Check for Profile Switching
-        if (account.subscription_tier === 'trial') {
-            // Free tier can only use Main profile (usually the first one created/fetched)
-            // However, logic should be handled in UI gating. Here we just select.
-            // But user asked: "can not switch from default user"
-            // Let's allow selection here but gate in UI or enforce here?
-            // Enforcing here is safer.
-            const targetProfile = account.profiles.find(p => p.id === profileId);
-            if (targetProfile && !targetProfile.is_main) {
-                // Block switching
-                console.warn("Free tier cannot switch profiles");
-                return;
-            }
-        }
+
 
         const profile = account.profiles.find(p => p.id === profileId);
         if (profile) {
@@ -167,9 +155,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         // Gating: Free tier cannot add profiles beyond main (max 1 or similar)
         // Implemented generic "Max 4" in backend, but free tier might be strict 1.
-        if (account.subscription_tier === 'trial') {
-            return { error: { message: "Upgrade to Premium to create more profiles." } };
-        }
+
 
         try {
             const token = await getToken();

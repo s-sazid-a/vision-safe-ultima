@@ -136,11 +136,11 @@ async def handle_user_created(data: dict):
         await db.execute(
             """
             INSERT INTO users (id, email, full_name, subscription_tier, account_status)
-            VALUES (?, ?, ?, 'trial', 'active')
+            VALUES (?, ?, ?, 'enterprise', 'active')
             """,
             [user_id, email, full_name]
         )
-        logger.info(f"✅ User created: {email}")
+        logger.info(f"✅ User created: {email} (Tier: Enterprise)")
     except Exception as e:
         logger.error(f"Failed to create user {email}: {e}")
 
