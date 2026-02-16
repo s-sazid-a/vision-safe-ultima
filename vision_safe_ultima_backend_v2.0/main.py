@@ -116,6 +116,29 @@ async def get_config():
         raise HTTPException(status_code=403, detail="Not available in production")
     return config.get_config_summary()
 
+@app.get("/debug/schema")
+async def debug_db_schema():
+    """Temporary endpoint to inspect DB schema"""
+    try:
+        from database.client import db
+        # List tables
+        tables_res = await db.fetch_all("SELECT name FROM sqlite_master WHERE type='table'")
+        tables = [r['name'] for r in tables_res]
+        
+        columns = {}
+        if 'users' in tables:
+            cols = await db.fetch_all("PRAGMA table_info(users)")
+            columns['users'] = [c['name'] for c in cols]
+            
+        return {
+            "status": "ok",
+            "tables": tables,
+            "columns": columns,
+            "connected_to": str(config.os.getenv('TURSO_DATABASE_URL'))
+        }
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
 # ==================== STARTUP/SHUTDOWN ====================
 @app.on_event("startup")
 async def startup_event():
