@@ -26,6 +26,11 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
                 detail="Invalid token payload",
                 headers={"WWW-Authenticate": "Bearer"},
             )
+        
+        # Ensure 'id' is available for legacy code
+        if "id" not in payload:
+            payload["id"] = user_id
+            
         return payload
         
     except jwt.PyJWTError as e:

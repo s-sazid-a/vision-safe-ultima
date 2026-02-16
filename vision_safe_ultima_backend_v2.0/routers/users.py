@@ -29,10 +29,10 @@ async def get_current_user_details(current_user: dict = Depends(get_current_user
     Auto-creates user from token if missing (Sync).
     """
     try:
-        user = await db.fetch_one("SELECT * FROM users WHERE id = ?", (current_user['sub'],))
+        user = await db.fetch_one("SELECT * FROM users WHERE id = ?", (current_user['id'],))
         
         if not user:
-            logger.info(f"User {current_user['sub']} missing in DB. Auto-syncing from token.")
+            logger.info(f"User {current_user['id']} missing in DB. Auto-syncing from token.")
             # Auto-create user
             email = current_user.get('email')
             if not email:
@@ -53,10 +53,10 @@ async def get_current_user_details(current_user: dict = Depends(get_current_user
                 INSERT INTO users (id, email, full_name, subscription_tier, account_status)
                 VALUES (?, ?, ?, 'trial', 'active')
                 """,
-                (current_user['sub'], email, full_name)
+                (current_user['id'], email, full_name)
             )
             # Fetch again
-            user = await db.fetch_one("SELECT * FROM users WHERE id = ?", (current_user['sub'],))
+            user = await db.fetch_one("SELECT * FROM users WHERE id = ?", (current_user['id'],))
         
         return UserResponse(
             id=user['id'],
@@ -88,7 +88,7 @@ async def update_subscription_tier(
         # But simpler to just try UPDATE, if 0 rows, Insert.
         
         # Check if user exists
-        user_check = await db.fetch_one("SELECT id FROM users WHERE id = ?", (current_user['sub'],))
+        user_check = await db.fetch_one("SELECT id FROM users WHERE id = ?", (current_user['id'],))
         if not user_check:
             # COPY PASTE AUTO-SYNC LOGIC (Refactor would be better but keeping it robust here)
             email = current_user.get('email')
@@ -104,12 +104,12 @@ async def update_subscription_tier(
                     INSERT INTO users (id, email, full_name, subscription_tier, account_status)
                     VALUES (?, ?, ?, ?, 'active')
                     """,
-                    (current_user['sub'], email, full_name, 'trial') # Create as trial first
+                    (current_user['id'], email, full_name, 'trial') # Create as trial first
                 )
 
         await db.execute(
             "UPDATE users SET subscription_tier = ? WHERE id = ?",
-            (update.tier, current_user['sub'])
+            (update.tier, current_user['id'])
         )
         return {"message": f"Subscription updated to {update.tier}"}
     except Exception as e:
