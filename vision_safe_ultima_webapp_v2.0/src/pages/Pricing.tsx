@@ -17,6 +17,7 @@ import {
 import Layout from "@/components/layout/Layout";
 import { useAuth } from "@/store/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
+import FloatingLines from "@/components/ui/FloatingLines";
 
 const plans = [
     {
@@ -153,8 +154,23 @@ const Pricing = () => {
 
     return (
         <Layout>
-            <section className="py-20 relative">
-                <div className="container mx-auto px-4">
+            {/* Hero */}
+            <section className="py-20 relative overflow-hidden">
+                {/* Floating Lines Background */}
+                <div style={{ width: '100%', height: '100%', position: 'absolute', inset: 0, zIndex: 0 }}>
+                    <FloatingLines
+                        enabledWaves={["top", "middle", "bottom"]}
+                        lineCount={5}
+                        lineDistance={5}
+                        bendRadius={10}
+                        bendStrength={0.5}
+                        interactive={true}
+                        parallax={true}
+                        colors={["#6366f1", "#8b5cf6", "#d946ef"]}
+                    />
+                </div>
+
+                <div className="container mx-auto px-4 relative z-10">
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
