@@ -1,8 +1,10 @@
 import { SignUp } from "@clerk/clerk-react";
+import MouseFollower from "@/components/effects/MouseFollower";
 
 export default function SignUpPage() {
     return (
         <div className="relative flex min-h-screen items-center justify-center bg-background grid-background overflow-hidden">
+            <MouseFollower />
             {/* Background Glow Effects */}
             <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-primary/20 blur-[120px] rounded-full pointer-events-none" />
             <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-secondary/10 blur-[120px] rounded-full pointer-events-none" />
