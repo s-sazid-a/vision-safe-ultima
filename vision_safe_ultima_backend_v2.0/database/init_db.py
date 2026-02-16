@@ -1,12 +1,15 @@
-"""
-Initialize Turso database with schema
-"""
-
 import asyncio
-from pathlib import Path
-from database.client import db
 import logging
 import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Load env vars from parent directory
+env_path = Path(__file__).parent.parent / '.env'
+if env_path.exists():
+    load_dotenv(env_path)
+
+from database.client import db
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

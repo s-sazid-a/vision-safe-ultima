@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Shield, Activity, Zap, Video } from "lucide-react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
@@ -14,45 +14,10 @@ interface CameraStats {
 }
 
 const LiveMonitor = () => {
-    const { activeCameras, currentRiskLevel, systemConfidence, notifications, clearNotifications, alertConfig, setAlertConfig } = useDetectionContext();
+    const { activeCameras, currentRiskLevel, systemConfidence, notifications, clearNotifications } = useDetectionContext();
 
-    // Local admin inputs for alert settings
-    const [adminEnabled, setAdminEnabled] = useState<boolean>(alertConfig.enabled);
-    const [adminEmail, setAdminEmail] = useState<string>(alertConfig.to);
-    const [saving, setSaving] = useState<boolean>(false);
 
-    useEffect(() => {
-        setAdminEnabled(alertConfig.enabled);
-        setAdminEmail(alertConfig.to);
-    }, [alertConfig]);
 
-    const handleSave = async () => {
-        setSaving(true);
-        try {
-            await setAlertConfig({ enabled: adminEnabled, to: adminEmail });
-        } catch (e) {
-            console.debug('Failed saving alert config', e);
-        } finally {
-            setSaving(false);
-        }
-    };
-
-    const handleToggleEnabled = async (checked: boolean) => {
-        const prev = adminEnabled;
-        // Optimistically update UI
-        setAdminEnabled(checked);
-        setSaving(true);
-        try {
-            await setAlertConfig({ enabled: checked, to: adminEmail });
-        } catch (e) {
-            // Revert on failure
-            console.debug('Failed saving alert config (toggle)', e);
-            setAdminEnabled(prev);
-        } finally {
-            setSaving(false);
-        }
-    };
-    
     const [cameras, setCameras] = useState<CameraStats[]>([
         { id: 1, label: "Cam 1", status: "offline", risk: { level: "LOW", score: 0 } },
         { id: 2, label: "Cam 2", status: "offline", risk: { level: "LOW", score: 0 } },
@@ -178,9 +143,8 @@ const LiveMonitor = () => {
                         </div>
                     )}
 
-                    <div className={`grid gap-4 transition-all duration-300 ${
-                        expandedCamera ? "grid-cols-1 lg:grid-cols-4" : "grid-cols-1 md:grid-cols-2"
-                    }`}>
+                    <div className={`grid gap-4 transition-all duration-300 ${expandedCamera ? "grid-cols-1 lg:grid-cols-4" : "grid-cols-1 md:grid-cols-2"
+                        }`}>
                         {cameras.map((camera) => {
                             const isExpanded = expandedCamera === camera.id;
                             let gridClass = "";
@@ -211,16 +175,14 @@ const LiveMonitor = () => {
 
                                     {/* Camera Status Overlay */}
                                     <div className="absolute top-3 right-3 z-10">
-                                        <div className={`flex items-center gap-2 px-2 py-1 rounded-md backdrop-blur-sm ${
-                                            camera.status === "active" ? "bg-green-500/20 border border-green-500/40" :
+                                        <div className={`flex items-center gap-2 px-2 py-1 rounded-md backdrop-blur-sm ${camera.status === "active" ? "bg-green-500/20 border border-green-500/40" :
                                             camera.status === "connecting" ? "bg-yellow-500/20 border border-yellow-500/40" :
-                                            "bg-gray-500/20 border border-gray-500/40"
-                                        }`}>
-                                            <div className={`w-2 h-2 rounded-full ${
-                                                camera.status === "active" ? "bg-green-500 animate-pulse" :
+                                                "bg-gray-500/20 border border-gray-500/40"
+                                            }`}>
+                                            <div className={`w-2 h-2 rounded-full ${camera.status === "active" ? "bg-green-500 animate-pulse" :
                                                 camera.status === "connecting" ? "bg-yellow-500 animate-pulse" :
-                                                "bg-gray-500"
-                                            }`} />
+                                                    "bg-gray-500"
+                                                }`} />
                                             <span className="text-xs font-medium capitalize">
                                                 {camera.status === "active" ? "Live" : camera.status === "connecting" ? "Connecting" : "Offline"}
                                             </span>
@@ -239,7 +201,7 @@ const LiveMonitor = () => {
                     </div>
                 </div>
 
-                
+
 
                 {/* Connection Guide */}
                 {activeCameras === 0 && (

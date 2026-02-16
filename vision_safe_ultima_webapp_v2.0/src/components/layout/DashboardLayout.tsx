@@ -122,7 +122,10 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" className="relative h-10 w-10 rounded-full p-0">
-                                    <Avatar className="h-10 w-10 border-2 border-primary/20">
+                                    <Avatar className={`h-10 w-10 border-2 ${account?.subscription_tier !== 'trial'
+                                            ? "border-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.5)]"
+                                            : "border-primary/20"
+                                        }`}>
                                         <AvatarImage src={currentProfile?.avatar_url} />
                                         <AvatarFallback>{currentProfile?.name?.substring(0, 2).toUpperCase() || "US"}</AvatarFallback>
                                     </Avatar>

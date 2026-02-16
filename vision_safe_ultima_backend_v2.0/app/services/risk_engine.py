@@ -37,78 +37,94 @@ class RiskEngine:
 
     def evaluate(self, safe_result: Dict[str, Any], unsafe_result: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Evaluate risk based on combined pipeline results.
+        Evaluate risk based on density and presence of Human vs Hazard.
         
-        Args:
-            safe_result: Dict with 'detections' array from SAFE model
-            unsafe_result: Dict with 'detections' array from UNSAFE model
-        
-        Returns:
-            Risk assessment dict with level, score, and factors
+        Logic:
+        1. SAFE ONLY (People): Low Risk, Score determined by crowd density (0-50).
+        2. UNSAFE ONLY (Hazards): High Risk, Score determined by hazard density (50-100).
+        3. MIXED (People + Hazards): Critical Risk, Score 100.
         """
         risk_score = 0.0
         risk_level = "LOW"
         risk_factors = []
-        
+        activity_type = "Safe Activity" # Default
+
         try:
-            # 1. Evaluate SAFE Pipeline (Activity Monitoring)
-            # SAFE detections are for monitoring only, not risk calculation
-            # We just track presence for logging/analytics
-            if safe_result:
-                safe_detections = safe_result.get("detections", [])
-                if safe_detections:
-                    # Log activity presence but don't increase risk
-                    activities = [d.get("label", "") for d in safe_detections]
-                    logger.debug(f"Safe activities detected: {activities}")
-                    # Baseline score for normal activity
-                    risk_score = 0.1
-
-            # 2. Evaluate UNSAFE Pipeline (Hazard Detection)
-            # This is where actual risk comes from
-            if unsafe_result:
-                detections = unsafe_result.get("detections", [])
-                
-                for det in detections:
-                    label = det.get("label", "").lower().strip()
-                    conf = det.get("confidence", 0.0)
-                    
-                    # CRITICAL: Fire detection
-                    if "fire" in label and conf > 0.5:
-                        risk_score = 1.0
-                        risk_level = "CRITICAL"
-                        risk_factors.append(f"🔥 Fire Detected (confidence: {conf:.2f})")
-                        logger.warning(f"CRITICAL ALERT: Fire detected with confidence {conf:.2f}")
-                    
-                    # HIGH: Vehicle detection (unauthorized access)
-                    elif "car" in label or "vehicle" in label:
-                        if conf > 0.6:
-                            risk_score = max(risk_score, 0.75)
-                            if risk_level != "CRITICAL":
-                                risk_level = "HIGH"
-                            vehicle_type = "Car" if "car" in label else "Vehicle"
-                            risk_factors.append(f"🚗 {vehicle_type} Detected (confidence: {conf:.2f})")
-                            logger.warning(f"HIGH ALERT: {vehicle_type} detected with confidence {conf:.2f}")
-                    
-                    elif "motorbike" in label or "motorcycle" in label:
-                        if conf > 0.6:
-                            risk_score = max(risk_score, 0.75)
-                            if risk_level != "CRITICAL":
-                                risk_level = "HIGH"
-                            risk_factors.append(f"🏍️ Motorbike Detected (confidence: {conf:.2f})")
-                            logger.warning(f"HIGH ALERT: Motorbike detected with confidence {conf:.2f}")
-
-            # 3. Normalize score to 0-1 range if not already
-            if risk_score > 1.0:
-                risk_score = 1.0
+            # Extract lists
+            safe_detections = safe_result.get("detections", []) if safe_result else []
+            unsafe_detections = unsafe_result.get("detections", []) if unsafe_result else []
             
-            # 4. Default fallback
-            if risk_score == 0:
+            # Count logical entities
+            # Safe: People (walking, sitting, standing, yoga)
+            person_count = len(safe_detections)
+            
+            # Unsafe: Vehicles, Fire
+            hazard_count = 0
+            has_fire = False
+            
+            for det in unsafe_detections:
+                label = det.get("label", "").lower()
+                if "fire" in label:
+                    has_fire = True
+                    hazard_count += 1
+                elif "car" in label or "vehicle" in label or "motorbike" in label or "truck" in label:
+                    hazard_count += 1
+
+            # --- LOGIC IMPLEMENTATION ---
+
+            # Scenario 1: No activity
+            if person_count == 0 and hazard_count == 0:
+                risk_level = "LOW"
                 risk_score = 0.0
-                
+                activity_type = "Safe Activity"
+
+            # Scenario 3: MIXED (People + Hazards) -> CRITICAL
+            elif person_count > 0 and hazard_count > 0:
+                risk_level = "CRITICAL"
+                risk_score = 100.0
+                activity_type = "Unsafe Activity"
+                risk_factors.append(f"CRITICAL: {person_count} People detected near {hazard_count} Hazards!")
+                if has_fire:
+                    risk_factors.append("🔥 Fire Threat Active")
+            
+            # Scenario 2: UNSAFE ONLY (Hazards) -> HIGH
+            elif hazard_count > 0:
+                risk_level = "HIGH"
+                activity_type = "Unsafe Activity"
+                # Score between 50-100 based on density
+                # Base 50, +10 per hazard, max 100
+                risk_score = min(100.0, 50.0 + (hazard_count * 10.0))
+                risk_factors.append(f"Unsafe Zone: {hazard_count} Hazards detected")
+                if has_fire:
+                    risk_factors.append("🔥 Fire Detected")
+
+            # Scenario 1 (Continued): SAFE ONLY (People) -> LOW
+            elif person_count > 0:
+                risk_level = "LOW"
+                activity_type = "Safe Activity"
+                # Score between 0-50 based on density
+                # +10 per person, max 50
+                risk_score = min(50.0, person_count * 10.0)
+                risk_factors.append(f"Safe Crowd: {person_count} People monitored")
+
             return {
                 "level": risk_level,
-                "score": risk_score,
+                "score": float(risk_score),
                 "factors": risk_factors,
+                "activity_type": activity_type,
+                "stats": {
+                    "person_count": person_count,
+                    "hazard_count": hazard_count
+                }
+            }
+        
+        except Exception as e:
+            logger.error(f"Error in risk evaluation: {e}")
+            return {
+                "level": "LOW",
+                "score": 0.0,
+                "factors": [],
+                "activity_type": "Safe Activity"
             }
         
         except Exception as e:

@@ -41,6 +41,22 @@ app = FastAPI(
 # Register webhooks
 app.include_router(webhook_router)
 
+# Register profiles router
+from routers import profiles
+app.include_router(profiles.router)
+
+# Register history router
+from routers import history
+app.include_router(history.router)
+
+# Register users router
+from routers import users
+app.include_router(users.router)
+
+# Register storage router
+from api import storage
+app.include_router(storage.router)
+
 # ==================== MIDDLEWARE ====================
 # CORS Configuration - Strict allowlist only
 app.add_middleware(
@@ -124,10 +140,10 @@ def resize_frame_if_needed(frame: np.ndarray) -> np.ndarray:
     return frame
 
 @app.websocket("/ws/stream")
-async def websocket_endpoint(websocket: WebSocket):
+async def websocket_endpoint(websocket: WebSocket, profile_id: Optional[str] = Query(None)):
     """WebSocket endpoint for real-time video frame processing"""
     await websocket.accept()
-    logger.info("✅ Client connected to WebSocket")
+    logger.info(f"✅ Client connected to WebSocket (Profile: {profile_id})")
     
     # Check if ML service is ready
     if ml_service.inference_service is None:
@@ -143,6 +159,37 @@ async def websocket_endpoint(websocket: WebSocket):
         except Exception as e:
             logger.error(f"Error closing WebSocket: {e}")
         return
+
+    # --- Session Start ---
+    from database.client import db
+    import uuid
+    session_id = str(uuid.uuid4())
+    camera_id = "cam_webcam" # Default for now
+    user_id = "unknown" # Should ideally be passed/verified, strictly profile_id helps trace
+    
+    # If profile_id provided, fetch user_id from it? 
+    # Or just use profile_id. 
+    # We need user_id for FK in sessions table.
+    if profile_id:
+        try:
+            prof = await db.fetch_one("SELECT user_id FROM profiles WHERE profile_id = ?", (profile_id,))
+            if prof:
+                user_id = prof['user_id']
+        except:
+            pass
+            
+    try:
+        # Create Camera if not exists (stub)
+        await db.execute("INSERT OR IGNORE INTO cameras (camera_id, user_id, camera_name, camera_type) VALUES (?, ?, ?, ?)", 
+                         (camera_id, user_id, "Webcam", "webcam"))
+                         
+        await db.execute(
+            "INSERT INTO sessions (session_id, user_id, profile_id, camera_id, started_at, session_type) VALUES (?, ?, ?, ?, datetime('now'), 'live')",
+            (session_id, user_id, profile_id, camera_id)
+        )
+    except Exception as e:
+        logger.error(f"Failed to start session: {e}")
+
     
     frame_count = 0
     frame_error_count = 0
@@ -215,10 +262,95 @@ async def websocket_endpoint(websocket: WebSocket):
                     
                     # Validate response
                     if "error" not in result:
-                        # Log detections periodically
                         safe_count = len(result.get("safe", {}).get("detections", []))
                         unsafe_count = len(result.get("unsafe", {}).get("detections", []))
                         
+                        # --- SAVE DATA ---
+                        # Save if there is any activity (Safe or Unsafe)
+                        risk_data = result.get('risk', {})
+                        risk_score = risk_data.get('score', 0)
+                        risk_level = risk_data.get('level', 'LOW')
+                        activity_type = risk_data.get('activity_type', 'Safe Activity')
+                        
+                        # Save if score > 0 (People or Hazards present)
+                        if risk_score > 0:
+                            # Map activity_type to category for DB
+                            # DB expects 'safe' or 'unsafe'
+                            detection_category = 'unsafe' if 'Unsafe' in activity_type else 'safe'
+                            
+                            # Determine hazard type / primary object
+                            hazard_type = None
+                            if detection_category == 'unsafe':
+                                has_fire = any(d.get('class') == 'fire' for d in result.get("unsafe", {}).get("detections", []))
+                                if has_fire:
+                                    hazard_type = 'fire'
+                                elif unsafe_count > 0:
+                                    hazard_type = result.get("unsafe", {}).get("detections", [])[0].get('class')
+                            
+                            # Insert into DB
+                            # Note: We might want to rate-limit this for Safe activities to avoid DB bloat?
+                            # For now, saving all processed frames with activity.
+                            await db.execute(
+                                """
+                                INSERT INTO detections (session_id, profile_id, frame_number, detection_category, hazard_type, risk_level, risk_score)
+                                VALUES (?, ?, ?, ?, ?, ?, ?)
+                                """,
+                                (session_id, profile_id, frame_count, detection_category, hazard_type, risk_level, risk_score)
+                            )
+                            
+                            # Create Alert ONLY if High/Critical Risk
+                            if risk_level in ['HIGH', 'CRITICAL'] and detection_category == 'unsafe':
+                                alert_title = f"{risk_level} Risk: {hazard_type}" if hazard_type else f"{risk_level} Risk Detected"
+                                alert_id = str(uuid.uuid4())
+                                
+                                # Async Alert Handling (Upload + DB) to avoid blocking stream
+                                async def handle_alert_async(
+                                    a_id, s_id, p_id, u_id, lvl, title, frame_img
+                                ):
+                                    snapshot_url = None
+                                    try:
+                                        # 1. Encode frame to JPEG
+                                        success, buffer = cv2.imencode(".jpg", frame_img)
+                                        if success:
+                                            # 2. Upload to B2
+                                            from io import BytesIO
+                                            from storage.b2_client import storage as b2_storage
+                                            
+                                            file_obj = BytesIO(buffer)
+                                            filename = f"alert_{a_id}.jpg"
+                                            
+                                            # Upload (this takes time, hence async)
+                                            # Ensure B2 client is initialized
+                                            if b2_storage.client:
+                                                upload_res = await b2_storage.upload_file(
+                                                    file_obj,
+                                                    folder="alert-snapshots",
+                                                    filename=filename,
+                                                    content_type="image/jpeg"
+                                                )
+                                                snapshot_url = upload_res.get('url')
+                                    except Exception as e:
+                                        logger.error(f"Failed to upload snapshot for alert {a_id}: {e}")
+                                    
+                                    # 3. Save Alert to DB
+                                    try:
+                                        await db.execute(
+                                            """
+                                            INSERT INTO alerts (alert_id, session_id, profile_id, user_id, alert_type, severity, title, snapshot_url)
+                                            VALUES (?, ?, ?, ?, 'SAFETY_VIOLATION', ?, ?, ?)
+                                            """,
+                                            (a_id, s_id, p_id, u_id, lvl, title, snapshot_url)
+                                        )
+                                        logger.info(f"🚨 Alert Saved: {title} (Snapshot: {snapshot_url})")
+                                    except Exception as e:
+                                        logger.error(f"Failed to save alert to DB: {e}")
+
+                                # Fire and forget execution
+                                asyncio.create_task(handle_alert_async(
+                                    alert_id, session_id, profile_id, user_id, risk_level, alert_title, frame.copy()
+                                ))
+
+                        # Log detections periodically
                         if safe_count > 0 or unsafe_count > 0:
                             logger.info(
                                 f"Frame {frame_count}: "
@@ -262,6 +394,15 @@ async def websocket_endpoint(websocket: WebSocket):
         except:
             pass
     finally:
+        # --- Session End ---
+        try:
+            await db.execute(
+                "UPDATE sessions SET ended_at = datetime('now'), status = 'completed', total_frames_processed = ? WHERE session_id = ?",
+                (frame_count, session_id)
+            )
+        except Exception as e:
+            logger.error(f"Failed to close session: {e}")
+            
         logger.info(f"📊 WebSocket session ended. Total frames processed: {frame_count}")
 
 

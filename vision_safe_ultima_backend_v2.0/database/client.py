@@ -18,7 +18,8 @@ class TursoClient:
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
-            cls._instance._initialize()
+            # Lazy initialization
+            cls._instance.client = None
         return cls._instance
     
     def _initialize(self):
@@ -32,6 +33,11 @@ class TursoClient:
                 self.client = None
                 return
 
+            # Force HTTPS for compatibility if libsql:// is provided
+            if url.startswith("libsql://"):
+                url = url.replace("libsql://", "https://")
+            
+            # create_client might require a running loop if it uses aiohttp immediately
             self.client = create_client(
                 url=url,
                 auth_token=auth_token
@@ -42,18 +48,11 @@ class TursoClient:
             raise
     
     async def execute(self, query: str, params: Optional[List] = None) -> Any:
-        """
-        Execute a SQL query
-        
-        Args:
-            query: SQL query string
-            params: Query parameters (for prepared statements)
-        
-        Returns:
-            Query result
-        """
+        # Lazy init
         if not self.client:
-             raise RuntimeError("Database client not initialized. Check TURSO_DATABASE_URL.")
+             self._initialize()
+             if not self.client:
+                 raise RuntimeError("Database client could not be initialized. Check TURSO_DATABASE_URL.")
 
         try:
             if params:
@@ -62,7 +61,9 @@ class TursoClient:
                 result = await self.client.execute(query)
             return result
         except Exception as e:
+            import traceback
             logger.error(f"Query failed: {query}, Error: {e}")
+            logger.error(traceback.format_exc())
             raise
     
     async def fetch_one(self, query: str, params: Optional[List] = None) -> Optional[Dict]:

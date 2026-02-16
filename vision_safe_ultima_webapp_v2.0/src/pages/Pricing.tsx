@@ -1,10 +1,22 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, X, Zap, Building2, Rocket, ArrowRight } from "lucide-react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+    DialogFooter,
+} from "@/components/ui/dialog";
 import Layout from "@/components/layout/Layout";
+import { useAuth } from "@/store/AuthContext";
+import { useToast } from "@/components/ui/use-toast";
 
 const plans = [
     {
@@ -77,6 +89,67 @@ const plans = [
 
 const Pricing = () => {
     const [isYearly, setIsYearly] = useState(true);
+    const { account, refreshAccount } = useAuth();
+    const navigate = useNavigate();
+    const { toast } = useToast();
+    const [processing, setProcessing] = useState<string | null>(null);
+    const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+    const [promoCode, setPromoCode] = useState("");
+    const [promoStatus, setPromoStatus] = useState<'idle' | 'valid' | 'invalid'>('idle');
+
+    const handleSubscribe = async (planName: string) => {
+        if (!account) {
+            navigate('/sign-up');
+            return;
+        }
+
+        const tierMap: Record<string, string> = {
+            'Starter': 'starter',
+            'Professional': 'professional',
+            'Enterprise': 'enterprise'
+        };
+
+        const targetTier = tierMap[planName];
+        if (!targetTier) return;
+
+        setProcessing(planName);
+
+        try {
+            const token = await import('@clerk/clerk-react').then(m => m.useClerk().session?.getToken());
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/users/me/subscription`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ tier: targetTier })
+            });
+
+            if (!res.ok) throw new Error("Subscription failed");
+
+            await refreshAccount();
+            toast({
+                title: "Subscription Updated",
+                description: `You are now on the ${planName} plan! ${promoStatus === 'valid' ? '(100% Promo Applied!)' : ''}`,
+            });
+            setSelectedPlan(null);
+            setPromoCode("");
+            setPromoStatus('idle');
+            navigate('/dashboard');
+
+        } catch (e) {
+            console.error(e);
+            toast({
+                title: "Error",
+                description: "Failed to update subscription. Please try again.",
+                variant: "destructive"
+            });
+        } finally {
+            setProcessing(null);
+        }
+    };
+
+    const currentTier = account?.subscription_tier || 'trial';
 
     return (
         <Layout>
@@ -107,6 +180,15 @@ const Pricing = () => {
                         <p className="text-lg text-muted-foreground mb-8">
                             Start with a 14-day free trial. No credit card required.
                         </p>
+
+                        {/* Continue Free Button for Logged In Users */}
+                        {account && currentTier === 'trial' && (
+                            <div className="mb-8">
+                                <Button variant="outline" onClick={() => navigate('/dashboard')}>
+                                    Continue with Limited Access (Free)
+                                </Button>
+                            </div>
+                        )}
 
                         {/* Billing toggle */}
                         <motion.div
@@ -212,18 +294,23 @@ const Pricing = () => {
                                         </div>
 
                                         {/* CTA */}
-                                        <Link to={plan.name === "Enterprise" ? "#" : "/signup"}>
-                                            <Button
-                                                className={`w-full h-12 font-semibold mb-8 ${plan.popular
-                                                        ? "bg-gradient-to-r from-primary to-accent hover:opacity-90 text-primary-foreground"
-                                                        : ""
-                                                    }`}
-                                                variant={plan.popular ? "default" : "outline"}
-                                            >
-                                                {plan.cta}
-                                                <ArrowRight className="w-4 h-4 ml-2" />
-                                            </Button>
-                                        </Link>
+                                        <Button
+                                            className={`w-full h-12 font-semibold mb-8 ${plan.popular
+                                                ? "bg-gradient-to-r from-primary to-accent hover:opacity-90 text-primary-foreground"
+                                                : ""
+                                                }`}
+                                            variant={plan.popular ? "default" : "outline"}
+                                            onClick={() => {
+                                                if (plan.name === "Enterprise" || (account && currentTier === plan.name.toLowerCase())) return;
+                                                setSelectedPlan(plan.name);
+                                            }}
+                                            disabled={!!(processing === plan.name || (account && currentTier === plan.name.toLowerCase()))}
+                                        >
+                                            {processing === plan.name ? "Processing..." : (
+                                                account ? (currentTier === plan.name.toLowerCase() ? "Current Plan" : "Upgrade") : plan.cta
+                                            )}
+                                            {processing !== plan.name && <ArrowRight className="w-4 h-4 ml-2" />}
+                                        </Button>
 
                                         {/* Features */}
                                         <ul className="space-y-3">
@@ -251,6 +338,95 @@ const Pricing = () => {
                     </div>
                 </div>
             </section>
+
+            {/* Payment Confirmation Dialog */}
+            <Dialog open={!!selectedPlan} onOpenChange={(open) => !open && setSelectedPlan(null)}>
+                <DialogContent className="glass-card sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle>Confirm Subscription</DialogTitle>
+                        <DialogDescription>
+                            You are upgrading to the <span className="font-bold text-primary">{selectedPlan}</span> plan.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="grid gap-4 py-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="promo">Promo Code</Label>
+                            <div className="flex gap-2">
+                                <Input
+                                    id="promo"
+                                    placeholder="ENTER CODE"
+                                    value={promoCode}
+                                    onChange={(e) => {
+                                        setPromoCode(e.target.value.toUpperCase());
+                                        setPromoStatus('idle'); // Reset status on edit
+                                    }}
+                                    className="uppercase tracking-wider font-mono"
+                                />
+                                <Button
+                                    variant="secondary"
+                                    onClick={() => {
+                                        const SECRET_CODES = [
+                                            "LAVANYA100", "DHANASHREE100", "MANIKANTA100", "PREKSHA100",
+                                            "RASAGNA100", "ROHIT100", "YASASWINI100", "SESHAVENI100",
+                                            "SATYAM100", "SAZID100", "YUG100"
+                                        ];
+                                        if (SECRET_CODES.includes(promoCode)) {
+                                            setPromoStatus('valid');
+                                            toast({ title: "Success!", description: "100% Discount Applied." });
+                                        } else {
+                                            setPromoStatus('invalid');
+                                        }
+                                    }}
+                                >
+                                    Apply
+                                </Button>
+                            </div>
+
+                            {/* Validation Messages */}
+                            {promoStatus === 'valid' && (
+                                <div className="flex items-center gap-2 text-green-500 text-sm font-bold animate-in fade-in slide-in-from-top-1">
+                                    <Check className="w-4 h-4" />
+                                    <span>Code Applied! (100% OFF)</span>
+                                </div>
+                            )}
+                            {promoStatus === 'invalid' && (
+                                <p className="text-sm text-red-500 animate-in fade-in slide-in-from-top-1">
+                                    Invalid Code. Please try again.
+                                </p>
+                            )}
+
+                            {/* Price Display */}
+                            <div className="mt-4 p-4 bg-muted/20 rounded-lg flex justify-between items-center">
+                                <span className="text-muted-foreground">Total to pay:</span>
+                                <div className="text-right">
+                                    {promoStatus === 'valid' ? (
+                                        <div className="flex flex-col items-end">
+                                            <span className="text-sm line-through text-muted-foreground">$29.00</span>
+                                            <span className="text-xl font-bold text-green-500">$0.00</span>
+                                        </div>
+                                    ) : (
+                                        <span className="text-xl font-bold">
+                                            {selectedPlan === 'Starter' ? '$29.00' : selectedPlan === 'Professional' ? '$99.00' : 'Custom'}
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setSelectedPlan(null)}>Cancel</Button>
+                        <Button
+                            className={`min-w-[140px] ${promoStatus === 'valid' ? 'bg-green-600 hover:bg-green-700' : 'bg-gradient-to-r from-primary to-accent'}`}
+                            onClick={() => selectedPlan && handleSubscribe(selectedPlan)}
+                            disabled={!!processing}
+                        >
+                            {processing ? "Processing..." : (promoStatus === 'valid' ? "Confirm Free Upgrade" : "Proceed to Payment")}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             {/* FAQ Teaser */}
             <section className="py-20 relative">

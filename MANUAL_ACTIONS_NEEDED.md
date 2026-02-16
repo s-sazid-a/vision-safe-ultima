@@ -58,3 +58,89 @@ Hello! I have done all the coding, but I need you to create the accounts and get
 
 Once you have done these 3 steps, type this in the chat:
 **"I have updated the env files."**
+
+---
+
+## 4️⃣ STEP 4: Get File Storage (Backblaze B2)
+
+1.  **Go here:** [https://www.backblaze.com/b2/sign-up.html](https://www.backblaze.com/b2/sign-up.html) (Sign Up for B2 Cloud Storage).
+2.  **Create Bucket:**
+    *   Click **Buckets** in the menu.
+    *   Click **Create a Bucket**.
+    *   Name it: `vision-safe-storage-UNIQUE_NAME` (must be globally unique).
+    *   **Privacy:** SELECT **Private** (Important for security).
+    *   Click **Create a Bucket**.
+3.  **Get Keys:**
+    *   Click **App Keys** in the menu.
+    *   Click **Add a New Application Key**.
+    *   Name: `VisionSafeKey`
+    *   **Allow access to Bucket(s):** Select your new bucket.
+    *   **Type of Access:** Read and Write.
+    *   Click **Create New Key**.
+    *   **COPY THESE (They only show once!):**
+        *   `keyID` (Application Key ID)
+        *   `applicationKey` (Application Key)
+4.  **Save them:**
+    *   Open `vision_safe_ultima_backend_v2.0\.env`.
+    *   Add these lines at the bottom (replace `your_...` with real values):
+        ```
+        B2_ENDPOINT=https://s3.us-east-005.backblazeb2.com
+        B2_KEY_ID=your_key_id
+        B2_APPLICATION_KEY=your_application_key
+        B2_BUCKET_NAME=your_bucket_name
+        ```
+    *   *Note: Endpoint depends on your region, check "S3 Endpoint" in Bucket Settings.*
+    *   Save the file.
+
+---
+
+## 5️⃣ STEP 5: Get Backup Storage (ImgBB) (Optional but Recommended)
+
+1.  **Go here:** [https://imgbb.com/login](https://imgbb.com/login)
+2.  **Get API Key:**
+    *   Go to [https://api.imgbb.com/](https://api.imgbb.com/)
+    *   Click **Get API Key**.
+    *   Copy the key.
+3.  **Save it:**
+    *   Open `vision_safe_ultima_backend_v2.0\.env`.
+    *   Add:
+        ```
+        IMGBB_API_KEY=your_api_key
+        ```
+    *   Save the file.
+
+---
+
+## 7️⃣ STEP 7: Host Backend (Railway)
+
+1.  **Go here:** [https://railway.app](https://railway.app) (Login with GitHub).
+2.  **New Project:**
+    *   Click **New Project** -> **Deploy from GitHub repo**.
+    *   Select `vision-safe-ultima`.
+3.  **Configure:**
+    *   Click on the project card.
+    *   Go to **Settings** -> **Root Directory**.
+    *   Set it to: `/vision_safe_ultima_backend_v2.0` **(Very Important!)**
+4.  **Environment Variables:**
+    *   Go to **Variables** tab.
+    *   Click **Raw Editor** (top right of variables section).
+    *   Open `vision_safe_ultima_backend_v2.0\.env` on your PC.
+    *   Copy EVERYTHING inside it.
+    *   Paste it into Railway.
+    *   **ADD ONE MORE:**
+        *   Key: `FRONTEND_URL`
+        *   Value: `https://vision-safe-ultima.vercel.app` (Or whatever your Vercel URL is).
+    *   Click **Update Variables**.
+5.  **Deploy:**
+    *   It should redeploy automatically. If not, click **Deploy**.
+    *   Wait for "Active".
+6.  **Get URL:**
+    *   Go to **Settings** -> **Networking** -> **Public Networking**.
+    *   Click **Generate Domain**.
+    *   Copy the URL (e.g., `https://vision-safe-ultima-production.up.railway.app`).
+7.  **Final Polish:**
+    *   Go back to **Vercel** -> Settings -> Environment Variables.
+    *   Add/Edit `VITE_API_URL` with your **Railway** URL.
+    *   Redeploy Vercel.
+
+**🎉 YOU ARE DONE!** Paste the Railway URL here.

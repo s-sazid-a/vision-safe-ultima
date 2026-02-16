@@ -14,7 +14,6 @@ import {
     Save,
     Loader2
 } from "lucide-react";
-import { useDetectionContext } from "@/store/DetectionContext";
 import { useAuth } from "@/store/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
 import {
@@ -274,64 +273,6 @@ const Settings = () => {
                 </Tabs>
             </div>
         </DashboardLayout>
-    );
-};
-
-const AlertSettingsBlock: React.FC = () => {
-    const { alertConfig, setAlertConfig } = useDetectionContext();
-    const [adminEnabled, setAdminEnabled] = useState<boolean>(alertConfig.enabled);
-    const [adminEmail, setAdminEmail] = useState<string>(alertConfig.to);
-    const [saving, setSaving] = useState(false);
-
-    useEffect(() => {
-        setAdminEnabled(alertConfig.enabled);
-        setAdminEmail(alertConfig.to);
-    }, [alertConfig]);
-
-    const handleSave = async () => {
-        setSaving(true);
-        try {
-            await setAlertConfig({ enabled: adminEnabled, to: adminEmail });
-        } catch (e) {
-            console.debug('Failed to save alert settings', e);
-        } finally {
-            setSaving(false);
-        }
-    };
-
-    const handleToggleEnabled = async (checked: boolean) => {
-        const prev = adminEnabled;
-        setAdminEnabled(checked);
-        setSaving(true);
-        try {
-            await setAlertConfig({ enabled: checked, to: adminEmail });
-        } catch (e) {
-            console.debug('Failed saving alert config (toggle)', e);
-            setAdminEnabled(prev);
-        } finally {
-            setSaving(false);
-        }
-    };
-
-    return (
-        <div className="mt-2 flex items-center gap-2">
-            <label className="text-sm">Email Alerts</label>
-            <input
-                type="checkbox"
-                checked={adminEnabled}
-                onChange={(e) => handleToggleEnabled(e.target.checked)}
-                className="accent-green-400"
-            />
-            <Input
-                className="ml-4 p-2 w-80"
-                value={adminEmail}
-                onChange={(e) => setAdminEmail(e.target.value)}
-                placeholder="recipient@example.com"
-            />
-            <Button className={`ml-2`} onClick={handleSave} disabled={saving}>
-                {saving ? 'Saving...' : 'Save'}
-            </Button>
-        </div>
     );
 };
 
