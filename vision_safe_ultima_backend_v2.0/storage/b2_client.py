@@ -88,9 +88,9 @@ class B2Storage:
                 'ContentType': content_type,
             }
             
-            # Make public if requested
-            if make_public:
-                extra_args['ACL'] = 'public-read'
+            # Make public if requested - B2 handles this differently, usually via bucket settings
+            # if make_public:
+            #     extra_args['ACL'] = 'public-read'
             
             # Get file size
             file.seek(0, 2)  # Seek to end
