@@ -76,24 +76,29 @@ app.add_middleware(
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
     """Health check endpoint"""
+    # Check DB Connection
+    db_status = "unknown"
+    db_error = None
+    try:
+        from database.client import db
+        # Set a timeout for the DB check to avoid hanging
+        await asyncio.wait_for(db.execute("SELECT 1"), timeout=5.0)
+        db_status = "connected"
+    except asyncio.TimeoutError:
+        db_status = "disconnected"
+        db_error = "Connection timed out (5s)"
+    except Exception as e:
+        db_status = "disconnected"
+        db_error = f"{type(e).__name__}: {str(e)}"
+
     return HealthResponse(
         status="healthy",
         version="2.0",
         ml_service_ready=ml_service.inference_service is not None,
         device=config.ML_DEVICE,
-        db_status="unknown"
+        db_status=db_status,
+        db_error=db_error
     )
-
-    # Check DB Connection
-    try:
-        from database.client import db
-        await db.execute("SELECT 1")
-        response.db_status = "connected"
-    except Exception as e:
-        response.db_status = "disconnected"
-        response.db_error = str(e)
-    
-    return response
 
 @app.get("/")
 async def root():
