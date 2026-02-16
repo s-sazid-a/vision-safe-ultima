@@ -9,6 +9,12 @@ import logging
 import traceback
 from typing import Optional
 import cv2
+# Patch for opencv-python-headless where setNumThreads is missing
+# This is required because ultralytics tries to call it
+if not hasattr(cv2, 'setNumThreads'):
+    def setNumThreads(*args, **kwargs):
+        pass
+    cv2.setNumThreads = setNumThreads
 import numpy as np
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware

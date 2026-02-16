@@ -34,7 +34,7 @@ async def get_history(
     The Frontend usually knows which profile is active.
     It should pass profile_id.
     """
-    try:
+
     try:
         query = """
         SELECT 

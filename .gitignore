@@ -44,7 +44,7 @@ yarn-error.log*
 *.sqlite3
 
 # ML Models (large files)
-*.pt
+
 *.pth
 *.h5
 *.pkl
