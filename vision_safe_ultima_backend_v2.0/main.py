@@ -30,6 +30,14 @@ if not hasattr(cv2, 'destroyAllWindows'):
     def destroyAllWindows(*args, **kwargs):
         pass
     cv2.destroyAllWindows = destroyAllWindows
+
+# constants
+if not hasattr(cv2, 'IMREAD_COLOR'):
+    cv2.IMREAD_COLOR = 1
+if not hasattr(cv2, 'IMREAD_GRAYSCALE'):
+    cv2.IMREAD_GRAYSCALE = 0
+if not hasattr(cv2, 'IMREAD_UNCHANGED'):
+    cv2.IMREAD_UNCHANGED = -1
 import numpy as np
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
