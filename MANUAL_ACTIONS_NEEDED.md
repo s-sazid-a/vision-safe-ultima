@@ -144,3 +144,26 @@ Once you have done these 3 steps, type this in the chat:
     *   Redeploy Vercel.
 
 **🎉 YOU ARE DONE!** Paste the Railway URL here.
+
+---
+
+## 📧 STEP 8: Enable Email Alerts (Optional)
+
+If you want the system to email you when it detects "Fire" or "Weapons":
+
+1.  **Get a Gmail App Password (The Secure Way):**
+    *   Go to your Google Account -> **Security**.
+    *   Search for **"App passwords"**.
+    *   Create a new one named `VisionSafe`.
+    *   Copy the 16-character password (e.g., `abcd efgh ijkl mnop`).
+2.  **Add Variables to Railway:**
+    *   Go to your Railway Project -> **Variables**.
+    *   Add these new variables:
+        *   `SMTP_HOST`: `smtp.gmail.com`
+        *   `SMTP_PORT`: `587`
+        *   `SMTP_USER`: `your-email@gmail.com`
+        *   `SMTP_PASS`: `your-16-char-app-password`
+        *   `SMTP_USE_TLS`: `true`
+        *   `ALERT_EMAIL_TO`: `your-email@gmail.com` (Or whoever should get the alerts).
+    *   Click **Update Variables**.
+    *   The backend will restart automatically.
