@@ -5,6 +5,7 @@ import { Shield, Mail, Phone, MapPin, Github, Twitter, Linkedin, Youtube } from 
 const footerLinks = {
     product: [
         { name: "Features", path: "/features" },
+        { name: "Pricing", path: "/pricing" },
         { name: "How It Works", path: "/how-it-works" },
         { name: "Testimonials", path: "/testimonials" },
     ],
