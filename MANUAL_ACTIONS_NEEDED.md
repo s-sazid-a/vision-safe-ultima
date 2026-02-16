@@ -145,6 +145,9 @@ Once you have done these 3 steps, type this in the chat:
 
 **🎉 YOU ARE DONE!** Paste the Railway URL here.
 
+**CONFIRMED:** `https://vision-safe-ultima-production.up.railway.app` is LIVE and HEALTHY. ✅
+Storage uploads are working perfectly! 🚀
+
 ---
 
 ## 📧 STEP 8: Enable Email Alerts (Optional)
@@ -167,3 +170,34 @@ If you want the system to email you when it detects "Fire" or "Weapons":
         *   `ALERT_EMAIL_TO`: `your-email@gmail.com` (Or whoever should get the alerts).
     *   Click **Update Variables**.
     *   The backend will restart automatically.
+
+---
+
+## 🌍 STEP 9: Host Frontend (Vercel)
+
+Now we make the website live!
+
+1.  **Go here:** [https://vercel.com/new](https://vercel.com/new) (Login with GitHub).
+2.  **Import:**
+    *   You should see `vision-safe-ultima` in the list.
+    *   Click **Import**.
+3.  **Configure Project:**
+    *   **Project Name:** `vision-safe-ultima` (or leave default).
+    *   **Root Directory:**
+        *   Click **Edit**.
+        *   Select `vision_safe_ultima_webapp_v2.0`.
+        *   Click **Continue**.
+4.  **Environment Variables:**
+    *   Click **Environment Variables** to expand it.
+    *   Add these two:
+        1.  **Name:** `VITE_CLERK_PUBLISHABLE_KEY`
+            *   **Value:** (Copy from your local `.env` file - starts with `pk_test_`).
+        2.  **Name:** `VITE_API_URL`
+            *   **Value:** `https://vision-safe-ultima-production.up.railway.app`
+    *   Click **Add** for each.
+5.  **Deploy:**
+    *   Click **Deploy**.
+    *   Wait about 1 minute.
+    *   You will see confetti! 🎉
+
+**Paste the Vercel URL here when done!**
