@@ -9,12 +9,27 @@ import logging
 import traceback
 from typing import Optional
 import cv2
-# Patch for opencv-python-headless where setNumThreads is missing
-# This is required because ultralytics tries to call it
+# Patch for opencv-python-headless where GUI functions are missing
+# This is required because ultralytics tries to assign them on import
 if not hasattr(cv2, 'setNumThreads'):
     def setNumThreads(*args, **kwargs):
         pass
     cv2.setNumThreads = setNumThreads
+
+if not hasattr(cv2, 'imshow'):
+    def imshow(*args, **kwargs):
+        pass
+    cv2.imshow = imshow
+
+if not hasattr(cv2, 'waitKey'):
+    def waitKey(*args, **kwargs):
+        return 0
+    cv2.waitKey = waitKey
+
+if not hasattr(cv2, 'destroyAllWindows'):
+    def destroyAllWindows(*args, **kwargs):
+        pass
+    cv2.destroyAllWindows = destroyAllWindows
 import numpy as np
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
