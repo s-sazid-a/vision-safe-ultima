@@ -57,6 +57,10 @@ app.include_router(users.router)
 from api import storage
 app.include_router(storage.router)
 
+# Register payments router
+from routers import payments
+app.include_router(payments.router)
+
 # ==================== MIDDLEWARE ====================
 # CORS Configuration - Strict allowlist only
 app.add_middleware(

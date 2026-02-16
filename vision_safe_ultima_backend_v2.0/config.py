@@ -15,6 +15,10 @@ if env_path.exists():
 # ==================== ENVIRONMENT VARIABLES ====================
 # API Configuration
 API_HOST = os.getenv("API_HOST", "0.0.0.0")
+
+# Payments (Razorpay)
+RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID")
+RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET")
 API_PORT = int(os.getenv("API_PORT", 8000))
 DEBUG_MODE = os.getenv("DEBUG_MODE", "false").lower() == "true"
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")

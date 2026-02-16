@@ -97,6 +97,17 @@ const Pricing = () => {
     const [promoCode, setPromoCode] = useState("");
     const [promoStatus, setPromoStatus] = useState<'idle' | 'valid' | 'invalid'>('idle');
 
+    // Load Razorpay Script (if not already loaded via index.html)
+    const loadRazorpay = () => {
+        return new Promise((resolve) => {
+            const script = document.createElement("script");
+            script.src = "https://checkout.razorpay.com/v1/checkout.js";
+            script.onload = () => resolve(true);
+            script.onerror = () => resolve(false);
+            document.body.appendChild(script);
+        });
+    };
+
     const handleSubscribe = async (planName: string) => {
         if (!account) {
             navigate('/sign-up');
@@ -112,38 +123,101 @@ const Pricing = () => {
         const targetTier = tierMap[planName];
         if (!targetTier) return;
 
-        setProcessing(planName);
+        // If promo code is valid (100% off), bypass payment
+        if (promoStatus === 'valid') {
+            setProcessing(planName);
+            try {
+                const token = await import('@clerk/clerk-react').then(m => m.useClerk().session?.getToken());
+                // Use the subscription update endpoint directly for 0 cost
+                await fetch(`${import.meta.env.VITE_API_URL}/users/me/subscription`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ tier: targetTier })
+                });
+                await refreshAccount();
+                toast({ title: "Success!", description: `Upgraded to ${planName} (100% Off)!` });
+                setSelectedPlan(null);
+                navigate('/dashboard');
+            } catch (e) {
+                toast({ title: "Error", description: "Promo redemption failed.", variant: "destructive" });
+            } finally {
+                setProcessing(null);
+            }
+            return;
+        }
 
+        // Standard Payment Flow
+        setProcessing(planName);
         try {
             const token = await import('@clerk/clerk-react').then(m => m.useClerk().session?.getToken());
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/users/me/subscription`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+
+            // 1. Create Order
+            const orderRes = await fetch(`${import.meta.env.VITE_API_URL}/payments/create-order`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({
+                    amount: plans.find(p => p.name === planName)?.monthlyPrice || 99, // default fallback
+                    currency: "INR",
+                    plan_id: targetTier
+                })
+            });
+
+            if (!orderRes.ok) throw new Error("Failed to create order");
+            const orderData = await orderRes.json();
+
+            // 2. Open Razorpay
+            const options = {
+                key: orderData.key_id,
+                amount: orderData.amount,
+                currency: orderData.currency,
+                name: "Vision Safe Ultima",
+                description: `${planName} Plan Subscription`,
+                order_id: orderData.id,
+                handler: async function (response: any) {
+                    // 3. Verify Payment
+                    try {
+                        const verifyRes = await fetch(`${import.meta.env.VITE_API_URL}/payments/verify`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                            body: JSON.stringify({
+                                razorpay_order_id: response.razorpay_order_id,
+                                razorpay_payment_id: response.razorpay_payment_id,
+                                razorpay_signature: response.razorpay_signature,
+                                plan_id: targetTier
+                            })
+                        });
+
+                        if (verifyRes.ok) {
+                            await refreshAccount();
+                            toast({ title: "Payment Successful!", description: `Welcome to ${planName} Plan!` });
+                            setSelectedPlan(null);
+                            navigate('/dashboard');
+                        } else {
+                            toast({ title: "Verification Failed", description: "Please contact support.", variant: "destructive" });
+                        }
+                    } catch (err) {
+                        console.error(err);
+                        toast({ title: "Error", description: "Payment verification failed.", variant: "destructive" });
+                    }
                 },
-                body: JSON.stringify({ tier: targetTier })
-            });
+                prefill: {
+                    name: account.full_name,
+                    email: account.email
+                },
+                theme: {
+                    color: "#6E00FF"
+                }
+            };
 
-            if (!res.ok) throw new Error("Subscription failed");
-
-            await refreshAccount();
-            toast({
-                title: "Subscription Updated",
-                description: `You are now on the ${planName} plan! ${promoStatus === 'valid' ? '(100% Promo Applied!)' : ''}`,
+            const rzp1 = new (window as any).Razorpay(options);
+            rzp1.on('payment.failed', function (response: any) {
+                toast({ title: "Payment Failed", description: response.error.description, variant: "destructive" });
             });
-            setSelectedPlan(null);
-            setPromoCode("");
-            setPromoStatus('idle');
-            navigate('/dashboard');
+            rzp1.open();
 
         } catch (e) {
             console.error(e);
-            toast({
-                title: "Error",
-                description: "Failed to update subscription. Please try again.",
-                variant: "destructive"
-            });
+            toast({ title: "Error", description: "Could not initiate payment.", variant: "destructive" });
         } finally {
             setProcessing(null);
         }
