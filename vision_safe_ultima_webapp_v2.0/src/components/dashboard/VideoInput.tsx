@@ -22,8 +22,25 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useDetectionContext } from "@/store/DetectionContext";
 import { useAuth } from "@/store/AuthContext";
 
-// Get WebSocket URL from environment or use default
-const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8000/ws/stream';
+// Smart WebSocket URL derivation
+const getWebSocketUrl = () => {
+    // 1. Explicit Env Var
+    if (import.meta.env.VITE_WS_URL) return import.meta.env.VITE_WS_URL;
+
+    // 2. Derive from API URL
+    const apiUrl = import.meta.env.VITE_API_URL;
+    if (apiUrl) {
+        // Replace http/https with ws/wss and append /ws/stream if not present
+        const wsProtocol = apiUrl.startsWith('https') ? 'wss' : 'ws';
+        const cleanUrl = apiUrl.replace(/^https?:\/\//, '').replace(/\/$/, ''); // Remove protocol and trailing slash
+        return `${wsProtocol}://${cleanUrl}/ws/stream`;
+    }
+
+    // 3. Localhost Fallback
+    return 'ws://localhost:8000/ws/stream';
+};
+
+const WS_URL = getWebSocketUrl();
 
 interface Detection {
     label: string;
