@@ -30,7 +30,7 @@ async def get_profiles(current_user: dict = Depends(get_current_user)):
     """
     Get all profiles associated with the current user's account.
     """
-    user_id = current_user['id'] # Clerk ID
+    user_id = current_user['sub'] # Clerk ID
     
     try:
         # Check if user exists in our DB
@@ -93,7 +93,7 @@ async def create_profile(profile: ProfileCreate, current_user: dict = Depends(ge
     """
     Create a new sub-profile. Limit 4 profiles per user.
     """
-    user_id = current_user['id']
+    user_id = current_user['sub']
 
     try:
         # Check profile count
@@ -132,7 +132,7 @@ async def delete_profile(profile_id: str, current_user: dict = Depends(get_curre
     """
     Delete a sub-profile. Cannot delete main profile.
     """
-    user_id = current_user['id']
+    user_id = current_user['sub']
 
     try:
         # Check if profile exists and belongs to user

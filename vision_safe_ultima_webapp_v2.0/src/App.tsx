@@ -11,6 +11,7 @@ import { Toaster } from "@/components/ui/toaster";
 import Home from "./pages/Home";
 import Features from "./pages/Features";
 import HowItWorks from "./pages/HowItWorks";
+import Pricing from "./pages/Pricing";
 import Testimonials from "./pages/Testimonials";
 import SignInPage from "./pages/SignIn";
 import SignUpPage from "./pages/SignUp";
@@ -35,12 +36,12 @@ const App = () => (
               <Route path="/home" element={<Home />} />
               <Route path="/features" element={<Features />} />
               <Route path="/how-it-works" element={<HowItWorks />} />
-              <Route path="/how-it-works" element={<HowItWorks />} />
+              <Route path="/pricing" element={<Pricing />} />
               <Route path="/testimonials" element={<Testimonials />} />
               <Route path="/signup" element={<Navigate to="/sign-up" replace />} />
-              <Route path="/sign-up/*" element={<SignUpPage />} />
+              <Route path="/sign-up" element={<SignUpPage />} />
               <Route path="/login" element={<Navigate to="/sign-in" replace />} />
-              <Route path="/sign-in/*" element={<SignInPage />} />
+              <Route path="/sign-in" element={<SignInPage />} />
 
               {/* Protected Dashboard Routes */}
               <Route path="/profiles" element={

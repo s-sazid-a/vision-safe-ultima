@@ -57,7 +57,6 @@ app.include_router(users.router)
 from api import storage
 app.include_router(storage.router)
 
-
 # ==================== MIDDLEWARE ====================
 # CORS Configuration - Strict allowlist only
 app.add_middleware(
@@ -66,35 +65,17 @@ app.add_middleware(
     allow_credentials=config.CORS_ALLOW_CREDENTIALS,
     allow_methods=config.CORS_ALLOW_METHODS,
     allow_headers=config.CORS_ALLOW_HEADERS,
-    allow_origin_regex=r"https://.*\.vercel\.app",
 )
 
 # ==================== HEALTH CHECK ====================
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
     """Health check endpoint"""
-    # Check DB Connection
-    db_status = "unknown"
-    db_error = None
-    try:
-        from database.client import db
-        # Set a timeout for the DB check to avoid hanging
-        await asyncio.wait_for(db.execute("SELECT 1"), timeout=5.0)
-        db_status = "connected"
-    except asyncio.TimeoutError:
-        db_status = "disconnected"
-        db_error = "Connection timed out (5s)"
-    except Exception as e:
-        db_status = "disconnected"
-        db_error = f"{type(e).__name__}: {str(e)}"
-
     return HealthResponse(
         status="healthy",
         version="2.0",
         ml_service_ready=ml_service.inference_service is not None,
-        device=config.ML_DEVICE,
-        db_status=db_status,
-        db_error=db_error
+        device=config.ML_DEVICE
     )
 
 @app.get("/")
@@ -112,29 +93,6 @@ async def get_config():
     if not config.DEBUG_MODE:
         raise HTTPException(status_code=403, detail="Not available in production")
     return config.get_config_summary()
-
-@app.get("/debug/schema")
-async def debug_db_schema():
-    """Temporary endpoint to inspect DB schema"""
-    try:
-        from database.client import db
-        # List tables
-        tables_res = await db.fetch_all("SELECT name FROM sqlite_master WHERE type='table'")
-        tables = [r['name'] for r in tables_res]
-        
-        columns = {}
-        if 'users' in tables:
-            cols = await db.fetch_all("PRAGMA table_info(users)")
-            columns['users'] = [c['name'] for c in cols]
-            
-        return {
-            "status": "ok",
-            "tables": tables,
-            "columns": columns,
-            "connected_to": str(config.os.getenv('TURSO_DATABASE_URL'))
-        }
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
 
 # ==================== STARTUP/SHUTDOWN ====================
 @app.on_event("startup")

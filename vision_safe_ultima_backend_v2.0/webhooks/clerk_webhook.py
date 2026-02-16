@@ -135,8 +135,8 @@ async def handle_user_created(data: dict):
     try:
         await db.execute(
             """
-            INSERT INTO users (id, email, full_name, account_status)
-            VALUES (?, ?, ?, 'active')
+            INSERT INTO users (id, email, full_name, subscription_tier, account_status)
+            VALUES (?, ?, ?, 'trial', 'active')
             """,
             [user_id, email, full_name]
         )
