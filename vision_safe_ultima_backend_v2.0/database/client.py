@@ -27,6 +27,12 @@ class TursoClient:
         try:
             url = os.getenv("TURSO_DATABASE_URL")
             auth_token = os.getenv("TURSO_AUTH_TOKEN")
+
+            # Clean up quotes if present (common mistake in Railway/Env vars)
+            if url:
+                url = url.strip('"').strip("'")
+            if auth_token:
+                auth_token = auth_token.strip('"').strip("'")
             
             if not url:
                 logger.warning("TURSO_DATABASE_URL not found, database features may fail")

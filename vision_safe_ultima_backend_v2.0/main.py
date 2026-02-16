@@ -80,8 +80,20 @@ async def health_check():
         status="healthy",
         version="2.0",
         ml_service_ready=ml_service.inference_service is not None,
-        device=config.ML_DEVICE
+        device=config.ML_DEVICE,
+        db_status="unknown"
     )
+
+    # Check DB Connection
+    try:
+        from database.client import db
+        await db.execute("SELECT 1")
+        response.db_status = "connected"
+    except Exception as e:
+        response.db_status = "disconnected"
+        response.db_error = str(e)
+    
+    return response
 
 @app.get("/")
 async def root():

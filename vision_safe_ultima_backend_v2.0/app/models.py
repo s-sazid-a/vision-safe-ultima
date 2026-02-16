@@ -77,3 +77,5 @@ class HealthResponse(BaseModel):
     version: str = Field(..., description="API version")
     ml_service_ready: bool = Field(..., description="Whether ML service is initialized")
     device: str = Field(..., description="ML device being used")
+    db_status: Optional[str] = Field("unknown", description="Status of the database connection (e.g., 'ok', 'disconnected')")
+    db_error: Optional[str] = Field(None, description="Error message if database connection is not 'ok'")
