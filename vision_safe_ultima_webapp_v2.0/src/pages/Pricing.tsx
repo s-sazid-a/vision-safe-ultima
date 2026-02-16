@@ -137,78 +137,32 @@ const Pricing = () => {
             return;
         }
 
-        // Standard Payment Flow
+        // Standard Payment Flow (DUMMY / FREE UPGRADE)
         setProcessing(planName);
+
         try {
+            // Simulate processing delay for UX
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
             const token = await import('@clerk/clerk-react').then(m => m.useClerk().session?.getToken());
 
-            // 1. Create Order
-            const orderRes = await fetch(`${import.meta.env.VITE_API_URL}/payments/create-order`, {
-                method: 'POST',
+            // Direct upgrade call (Bypassing Payment)
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/users/me/subscription`, {
+                method: 'PATCH',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({
-                    amount: plans.find(p => p.name === planName)?.monthlyPrice || 99, // default fallback
-                    currency: "INR",
-                    plan_id: targetTier
-                })
+                body: JSON.stringify({ tier: targetTier })
             });
 
-            if (!orderRes.ok) throw new Error("Failed to create order");
-            const orderData = await orderRes.json();
+            if (!res.ok) throw new Error("Upgrade failed");
 
-            // 2. Open Razorpay
-            const options = {
-                key: orderData.key_id,
-                amount: orderData.amount,
-                currency: orderData.currency,
-                name: "Vision Safe Ultima",
-                description: `${planName} Plan Subscription`,
-                order_id: orderData.id,
-                handler: async function (response: any) {
-                    // 3. Verify Payment
-                    try {
-                        const verifyRes = await fetch(`${import.meta.env.VITE_API_URL}/payments/verify`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                            body: JSON.stringify({
-                                razorpay_order_id: response.razorpay_order_id,
-                                razorpay_payment_id: response.razorpay_payment_id,
-                                razorpay_signature: response.razorpay_signature,
-                                plan_id: targetTier
-                            })
-                        });
-
-                        if (verifyRes.ok) {
-                            await refreshAccount();
-                            toast({ title: "Payment Successful!", description: `Welcome to ${planName} Plan!` });
-                            setSelectedPlan(null);
-                            navigate('/dashboard');
-                        } else {
-                            toast({ title: "Verification Failed", description: "Please contact support.", variant: "destructive" });
-                        }
-                    } catch (err) {
-                        console.error(err);
-                        toast({ title: "Error", description: "Payment verification failed.", variant: "destructive" });
-                    }
-                },
-                prefill: {
-                    name: account.email.split('@')[0], // Fallback name from email
-                    email: account.email
-                },
-                theme: {
-                    color: "#6E00FF"
-                }
-            };
-
-            const rzp1 = new (window as any).Razorpay(options);
-            rzp1.on('payment.failed', function (response: any) {
-                toast({ title: "Payment Failed", description: response.error.description, variant: "destructive" });
-            });
-            rzp1.open();
+            await refreshAccount();
+            toast({ title: "Payment Successful!", description: `Welcome to ${planName} Plan!` });
+            setSelectedPlan(null);
+            navigate('/dashboard');
 
         } catch (e) {
             console.error(e);
-            toast({ title: "Error", description: "Could not initiate payment.", variant: "destructive" });
+            toast({ title: "Error", description: "Could not process upgrade.", variant: "destructive" });
         } finally {
             setProcessing(null);
         }
