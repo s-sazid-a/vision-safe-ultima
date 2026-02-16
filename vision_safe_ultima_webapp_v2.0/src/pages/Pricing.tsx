@@ -97,16 +97,7 @@ const Pricing = () => {
     const [promoCode, setPromoCode] = useState("");
     const [promoStatus, setPromoStatus] = useState<'idle' | 'valid' | 'invalid'>('idle');
 
-    // Load Razorpay Script (if not already loaded via index.html)
-    const loadRazorpay = () => {
-        return new Promise((resolve) => {
-            const script = document.createElement("script");
-            script.src = "https://checkout.razorpay.com/v1/checkout.js";
-            script.onload = () => resolve(true);
-            script.onerror = () => resolve(false);
-            document.body.appendChild(script);
-        });
-    };
+    // Load Razorpay Script handled via index.html
 
     const handleSubscribe = async (planName: string) => {
         if (!account) {
@@ -201,7 +192,7 @@ const Pricing = () => {
                     }
                 },
                 prefill: {
-                    name: account.full_name,
+                    name: account.email.split('@')[0], // Fallback name from email
                     email: account.email
                 },
                 theme: {
