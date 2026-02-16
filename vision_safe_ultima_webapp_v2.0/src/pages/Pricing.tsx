@@ -153,16 +153,23 @@ const Pricing = () => {
                 body: JSON.stringify({ tier: targetTier })
             });
 
-            if (!res.ok) throw new Error("Upgrade failed");
+            if (!res.ok) {
+                const errData = await res.json();
+                throw new Error(errData.detail || "Upgrade failed");
+            }
 
             await refreshAccount();
             toast({ title: "Payment Successful!", description: `Welcome to ${planName} Plan!` });
             setSelectedPlan(null);
             navigate('/dashboard');
 
-        } catch (e) {
+        } catch (e: any) {
             console.error(e);
-            toast({ title: "Error", description: "Could not process upgrade.", variant: "destructive" });
+            toast({
+                title: "Error",
+                description: e.message || "Could not process upgrade.",
+                variant: "destructive"
+            });
         } finally {
             setProcessing(null);
         }
