@@ -69,6 +69,7 @@ app.add_middleware(
     allow_credentials=config.CORS_ALLOW_CREDENTIALS,
     allow_methods=config.CORS_ALLOW_METHODS,
     allow_headers=config.CORS_ALLOW_HEADERS,
+    allow_origin_regex=r"https://.*\.vercel\.app",
 )
 
 # ==================== HEALTH CHECK ====================

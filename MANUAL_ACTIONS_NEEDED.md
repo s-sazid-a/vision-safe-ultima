@@ -43,6 +43,11 @@ Hello! I have done all the coding, but I need you to create the accounts and get
     *   **Name:** `Vision Safe Ultima`
     *   **"How will your users sign in?":** Check **Email** and **Google**.
     *   Click **Create Application**.
+3.  **Configure Settings (IMPORTANT):**
+    *   Go to **User & Authentication** (Left Menu) -> **Email, Phone, Username**.
+    *   Find **Phone number**. Toggle it **OFF** (Gray).
+    *   Ensure **Email address** is ON and Required.
+    *   Click **Save**.
 3.  **Get API Keys:**
     *   You will see "API Keys" on the screen.
     *   Copy **Publishable Key** (starts with `pk_test_`).
@@ -201,3 +206,38 @@ Now we make the website live!
     *   You will see confetti! 🎉
 
 **Paste the Vercel URL here when done!**
+
+---
+
+## 🔟 STEP 10: Get Payment Keys (Razorpay)
+
+1.  **Go here:** [https://dashboard.razorpay.com/signup](https://dashboard.razorpay.com/signup)
+2.  **Sign Up:** Use your Google Account.
+3.  **If asked for website/app details:**
+    *   **Website:** `https://vision-safe-ultima.vercel.app`
+    *   **"Does your website require login?":** Select **Yes**.
+    *   **Add Test Account Username/Email:** `guest@vision-safe.com`
+    *   **Add Test Account Password:** `GuestUser123!`
+    *   **Click Submit**.
+4.  **Switch to Test Mode:**
+    *   Look at the top right corner.
+    *   You will see a toggle switch that says **"Live Mode"** or **"Test Mode"**.
+    *   **Click it** to switch to **"Test Mode"** (It should turn orange).
+4.  **Get Keys:**
+    *   Go to **Account & Settings** (Bottom Left) -> **API Keys**.
+    *   Click **Generate Test Key**.
+    *   **COPY THESE:**
+        *   `Key ID` (starts with `rzp_test_...`)
+        *   `Key Secret`
+5.  **Save them:**
+    *   Open `vision_safe_ultima_backend_v2.0\.env`.
+    *   Add these lines:
+        ```
+        RAZORPAY_KEY_ID=paste_key_id_here
+        RAZORPAY_KEY_SECRET=paste_key_secret_here
+        ```
+    *   Save the file.
+6.  **Restart Backend:**
+    *   Close the black terminal window running the backend.
+    *   Double-click `start_backend.bat` again.
+    *   *(If using Railway, go to Railway -> Variables -> Add these 2 variables -> Redeploy)*.
