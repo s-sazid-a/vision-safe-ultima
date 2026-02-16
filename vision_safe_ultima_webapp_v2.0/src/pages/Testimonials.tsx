@@ -62,10 +62,10 @@ const industries = [
 ];
 
 const stats = [
-    { value: "99.8%", label: "Detection Accuracy" },
-    { value: "50M+", label: "Hours Monitored" },
-    { value: "10K+", label: "Active Installations" },
-    { value: "1,200+", label: "Incidents Prevented" },
+    { value: "97.8%", label: "Detection Accuracy" },
+    { value: "600k+", label: "Hours Monitored" },
+    { value: "3k+", label: "Active Installations" },
+    { value: "1200+", label: "Incidents Prevented" },
 ];
 
 const Testimonials = () => {
