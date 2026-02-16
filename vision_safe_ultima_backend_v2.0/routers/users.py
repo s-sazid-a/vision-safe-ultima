@@ -43,8 +43,9 @@ async def get_current_user_details(current_user: dict = Depends(get_current_user
                     email = emails[0]['email_address'] if isinstance(emails[0], dict) else emails[0]
             
             if not email:
-                 logger.error("Cannot auto-sync user: No email in token")
-                 raise HTTPException(status_code=400, detail="User not found and email missing in token")
+                 # Fallback for users without email (e.g. phone auth)
+                 logger.warning(f"No email found for user {current_user['id']}. Using placeholder.")
+                 email = f"missing_{current_user['id']}@vision-safe.com"
 
             full_name = current_user.get('name') or current_user.get('full_name') or email.split('@')[0]
             
@@ -112,6 +113,20 @@ async def update_subscription_tier(
                     if "UNIQUE" not in str(insert_err) and "constraint" not in str(insert_err):
                         logger.error(f"Auto-create failed: {insert_err}")
                         # Don't raise, try update anyway
+            else:
+                 # Fallback if email missing in update flow too
+                 email = f"missing_{current_user['id']}@vision-safe.com"
+                 full_name = current_user.get('name') or current_user.get('full_name') or "User"
+                 try:
+                    await db.execute(
+                        """
+                        INSERT INTO users (id, email, full_name, subscription_tier, account_status)
+                        VALUES (?, ?, ?, ?, 'active')
+                        """,
+                        (current_user['id'], email, full_name, 'trial')
+                    )
+                 except Exception:
+                     pass
 
         await db.execute(
             "UPDATE users SET subscription_tier = ? WHERE id = ?",
