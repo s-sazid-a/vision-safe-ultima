@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
+import { useAuth } from './AuthContext';
 
 export interface Detection {
     label: string;
@@ -31,22 +32,22 @@ interface DetectionContextType {
     detectionHistory: CameraDetection[];
     addDetection: (detection: CameraDetection) => void;
     clearHistory: () => void;
-    
+
     // Camera status
     cameras: CameraStream[];
     updateCameraStatus: (cameraId: number, status: Partial<CameraStream>) => void;
-    
+
     // Stats
     totalDetections: number;
     criticalAlerts: number;
     highAlerts: number;
-    
+
     // Real-time stats for dashboard
     activeCameras: number;
     currentRiskLevel: 'LOW' | 'HIGH' | 'CRITICAL';
     systemConfidence: number;
     // Notifications
-    notifications: Array<{ id: string; message: string; level: 'LOW'|'HIGH'|'CRITICAL'; ts: number }>;
+    notifications: Array<{ id: string; message: string; level: 'LOW' | 'HIGH' | 'CRITICAL'; ts: number }>;
     clearNotifications: () => void;
 
     // Alert email settings (admin)
@@ -60,8 +61,10 @@ const MAX_HISTORY_SIZE = 1000; // Keep last 1000 detections
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 export const DetectionProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+    const { currentProfile, getToken } = useAuth(); // Get auth context
+
     const [detectionHistory, setDetectionHistory] = useState<CameraDetection[]>([]);
-    const [notifications, setNotifications] = useState<Array<{ id: string; message: string; level: 'LOW'|'HIGH'|'CRITICAL'; ts: number }>>([]);
+    const [notifications, setNotifications] = useState<Array<{ id: string; message: string; level: 'LOW' | 'HIGH' | 'CRITICAL'; ts: number }>>([]);
     const [alertConfig, setAlertConfigState] = useState<{ enabled: boolean; to: string }>({ enabled: false, to: '' });
     const [cameras, setCameras] = useState<CameraStream[]>([
         { id: 1, label: 'Cam 1', mode: 'idle', isConnected: false },
@@ -69,6 +72,42 @@ export const DetectionProvider: React.FC<{ children: ReactNode }> = ({ children 
         { id: 3, label: 'Cam 3', mode: 'idle', isConnected: false },
         { id: 4, label: 'Cam 4', mode: 'idle', isConnected: false },
     ]);
+
+    // Fetch history on load/profile change
+    useEffect(() => {
+        const fetchHistory = async () => {
+            if (!currentProfile) return;
+            try {
+                const token = await getToken();
+                const res = await fetch(`${API_URL}/history/?profile_id=${currentProfile.id}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    // Map backend history to Context Detection objects
+                    const mapped: CameraDetection[] = data.map((d: any) => ({
+                        cameraId: typeof d.camera_id === 'number' ? d.camera_id : 0, // Fallback
+                        cameraLabel: d.camera_name || "Camera",
+                        timestamp: new Date(d.created_at),
+                        riskLevel: d.risk_level,
+                        riskScore: d.risk_level === 'CRITICAL' ? 0.9 : (d.risk_level === 'HIGH' ? 0.7 : 0.1),
+                        safeDetections: [], // Backend simple history doesn't have details
+                        unsafeDetections: d.hazard_type ? [{
+                            label: d.hazard_type,
+                            confidence: 1.0,
+                            bbox: [0, 0, 0, 0],
+                            type: 'unsafe'
+                        }] : [],
+                        inferenceTime: 0
+                    }));
+                    setDetectionHistory(mapped);
+                }
+            } catch (e) {
+                console.error("Failed to load detection history context", e);
+            }
+        };
+        fetchHistory();
+    }, [currentProfile, getToken]);
 
     const addDetection = useCallback((detection: CameraDetection) => {
         setDetectionHistory(prev => {
@@ -83,8 +122,8 @@ export const DetectionProvider: React.FC<{ children: ReactNode }> = ({ children 
     }, []);
 
     const updateCameraStatus = useCallback((cameraId: number, status: Partial<CameraStream>) => {
-        setCameras(prev => 
-            prev.map(cam => 
+        setCameras(prev =>
+            prev.map(cam =>
                 cam.id === cameraId ? { ...cam, ...status } : cam
             )
         );
@@ -95,19 +134,19 @@ export const DetectionProvider: React.FC<{ children: ReactNode }> = ({ children 
     const criticalAlerts = detectionHistory.filter(d => d.riskLevel === 'CRITICAL').length;
     const highAlerts = detectionHistory.filter(d => d.riskLevel === 'HIGH').length;
     const activeCameras = cameras.filter(c => c.isConnected).length;
-    
+
     // Current risk level (highest priority)
-    const currentRiskLevel = 
+    const currentRiskLevel =
         detectionHistory.some(d => d.riskLevel === 'CRITICAL') ? 'CRITICAL' :
-        detectionHistory.some(d => d.riskLevel === 'HIGH') ? 'HIGH' :
-        'LOW';
-    
+            detectionHistory.some(d => d.riskLevel === 'HIGH') ? 'HIGH' :
+                'LOW';
+
     // System confidence (average of last 10 detections)
     const systemConfidence = detectionHistory.length > 0
         ? (detectionHistory.slice(0, 10).reduce((sum, d) => {
             const avgConf = [...d.safeDetections, ...d.unsafeDetections].length > 0
                 ? [...d.safeDetections, ...d.unsafeDetections].reduce((s, det) => s + det.confidence, 0) /
-                  [...d.safeDetections, ...d.unsafeDetections].length
+                [...d.safeDetections, ...d.unsafeDetections].length
                 : 0;
             return sum + avgConf;
         }, 0) / Math.min(10, detectionHistory.length)) * 100

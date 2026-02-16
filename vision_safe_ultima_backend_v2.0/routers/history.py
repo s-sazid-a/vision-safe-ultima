@@ -17,6 +17,8 @@ class DetectionRecord(BaseModel):
     hazard_type: Optional[str]
     risk_level: str
     created_at: str
+    camera_id: Optional[str] = None
+    camera_name: Optional[str] = None
 
 @router.get("/", response_model=List[DetectionRecord])
 async def get_history(
@@ -33,14 +35,22 @@ async def get_history(
     It should pass profile_id.
     """
     try:
-        query = "SELECT id, session_id, profile_id, frame_number, hazard_type, risk_level, created_at FROM detections"
+    try:
+        query = """
+        SELECT 
+            d.id, d.session_id, d.profile_id, d.frame_number, d.hazard_type, d.risk_level, d.created_at,
+            s.camera_id, c.camera_name
+        FROM detections d
+        JOIN sessions s ON d.session_id = s.session_id
+        LEFT JOIN cameras c ON s.camera_id = c.camera_id
+        """
         params = []
         
         if profile_id:
-            query += " WHERE profile_id = ?"
+            query += " WHERE d.profile_id = ?"
             params.append(profile_id)
         
-        query += " ORDER BY created_at DESC LIMIT 100"
+        query += " ORDER BY d.created_at DESC LIMIT 100"
         
         result = await db.fetch_all(query, params)
         
@@ -53,7 +63,9 @@ async def get_history(
                 frame_number=row['frame_number'],
                 hazard_type=row['hazard_type'],
                 risk_level=row['risk_level'],
-                created_at=row['created_at']
+                created_at=row['created_at'],
+                camera_id=row['camera_id'] or "unknown",
+                camera_name=row['camera_name'] or "Camera"
             ))
             
         return history

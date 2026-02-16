@@ -57,7 +57,7 @@ const History = () => {
 
                     const mapped = data.map((d: any) => ({
                         timestamp: new Date(d.created_at),
-                        cameraLabel: d.hazard_type ? "Camera (Recorded)" : "Camera", // We didn't save camera label in detections table in my simple SQL?
+                        cameraLabel: d.camera_name || (d.hazard_type ? "Camera (Recorded)" : "Camera"),
                         // Wait, detections table schema: (session_id, profile_id, frame_number, detection_category, hazard_type, risk_level)
                         // It doesn't have camera_id or safe_detections list.
                         // I might need to join sessions table to get camera_id? 
