@@ -9,8 +9,7 @@ import {
     Minimize2,
     AlertTriangle,
     Edit2,
-    Check,
-    Zap
+    Check
 } from "lucide-react";
 import {
     Dialog,
@@ -64,6 +63,8 @@ interface VideoInputProps {
 const VideoInput = ({ id, label, isExpanded, onToggleExpand, onRename, onRiskUpdate, onStatusChange }: VideoInputProps) => {
     const { addDetection, updateCameraStatus } = useDetectionContext();
     const { currentProfile } = useAuth();
+    // Force refresh check
+    useEffect(() => { console.log("VideoInput: Unlocked Version Loaded"); }, []);
     const [mode, setMode] = useState<"webcam" | "file" | "idle">("idle");
     const [stream, setStream] = useState<MediaStream | null>(null);
 
@@ -563,48 +564,18 @@ const VideoInput = ({ id, label, isExpanded, onToggleExpand, onRename, onRiskUpd
                                     <TabsTrigger value="url">URL</TabsTrigger>
                                 </TabsList>
                                 <TabsContent value="webcam" className="space-y-4 pt-4">
-                                    {/* Gating Check */}
-                                    {useAuth().account?.subscription_tier === 'trial' ? (
-                                        <div className="flex flex-col items-center gap-4 py-8 border-2 border-dashed rounded-lg opacity-50 relative overflow-hidden">
-                                            <div className="absolute inset-0 bg-black/10 backdrop-blur-[1px] flex items-center justify-center z-10">
-                                                <div className="bg-background/90 px-4 py-2 rounded-full border border-primary/20 shadow-lg text-sm font-semibold flex items-center gap-2">
-                                                    <Zap className="w-4 h-4 text-primary" />
-                                                    Premium Feature
-                                                </div>
-                                            </div>
-                                            <Camera className="w-12 h-12 text-muted-foreground" />
-                                            <p className="text-sm text-muted-foreground">Use your local camera device</p>
-                                            <Button disabled>Start Webcam</Button>
-                                        </div>
-                                    ) : (
-                                        <div className="flex flex-col items-center gap-4 py-8 border-2 border-dashed rounded-lg">
-                                            <Camera className="w-12 h-12 text-muted-foreground" />
-                                            <p className="text-sm text-muted-foreground">Use your local camera device</p>
-                                            <Button onClick={handleWebcamStart}>Start Webcam</Button>
-                                        </div>
-                                    )}
+                                    <div className="flex flex-col items-center gap-4 py-8 border-2 border-dashed rounded-lg">
+                                        <Camera className="w-12 h-12 text-muted-foreground" />
+                                        <p className="text-sm text-muted-foreground">Use your local camera device</p>
+                                        <Button onClick={handleWebcamStart}>Start Webcam</Button>
+                                    </div>
                                 </TabsContent>
                                 <TabsContent value="upload" className="space-y-4 pt-4">
-                                    {/* Gating Check */}
-                                    {useAuth().account?.subscription_tier === 'trial' ? (
-                                        <div className="flex flex-col items-center gap-4 py-8 border-2 border-dashed rounded-lg opacity-50 relative overflow-hidden">
-                                            <div className="absolute inset-0 bg-black/10 backdrop-blur-[1px] flex items-center justify-center z-10">
-                                                <div className="bg-background/90 px-4 py-2 rounded-full border border-primary/20 shadow-lg text-sm font-semibold flex items-center gap-2">
-                                                    <Zap className="w-4 h-4 text-primary" />
-                                                    Premium Feature
-                                                </div>
-                                            </div>
-                                            <Upload className="w-12 h-12 text-muted-foreground" />
-                                            <p className="text-sm text-muted-foreground">Select a video file (MP4, WEBM)</p>
-                                            <Input type="file" disabled />
-                                        </div>
-                                    ) : (
-                                        <div className="flex flex-col items-center gap-4 py-8 border-2 border-dashed rounded-lg">
-                                            <Upload className="w-12 h-12 text-muted-foreground" />
-                                            <p className="text-sm text-muted-foreground">Select a video file (MP4, WEBM)</p>
-                                            <Input type="file" accept="video/*" onChange={handleFileUpload} />
-                                        </div>
-                                    )}
+                                    <div className="flex flex-col items-center gap-4 py-8 border-2 border-dashed rounded-lg">
+                                        <Upload className="w-12 h-12 text-muted-foreground" />
+                                        <p className="text-sm text-muted-foreground">Select a video file (MP4, WEBM)</p>
+                                        <Input type="file" accept="video/*" onChange={handleFileUpload} />
+                                    </div>
                                 </TabsContent>
                                 <TabsContent value="url" className="space-y-4 pt-4">
                                     <div className="flex flex-col gap-4 py-4">

@@ -13,7 +13,6 @@ export type UserProfile = {
 export type Account = {
     id: string;
     email: string;
-    subscription_tier: 'trial' | 'starter' | 'professional' | 'enterprise'; // Added
     profiles: UserProfile[];
 };
 
@@ -63,14 +62,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             const token = await getToken();
             const headers = { 'Authorization': `Bearer ${token}` };
 
-            // 1. Fetch User Details (Subscription)
-            const userRes = await fetch(`${import.meta.env.VITE_API_URL}/users/me`, { headers });
-            let subscription_tier: Account['subscription_tier'] = 'trial';
+            // 1. Fetch User Details (Subscription removed)
+            // const userRes = await fetch(`${import.meta.env.VITE_API_URL}/users/me`, { headers });
+            // kept comment for context but removing call to avoid unused var warning
+            // actually we don't need to fetch user details if we only needed subscription_tier which is gone
+            // and we have user id/email from clerk.
+            // But strict mode might still want to check if user exists in DB? 
+            // The profiles fetch will fail if user doesn't exist (401/404), so that's enough key.
 
-            if (userRes.ok) {
-                const userData = await userRes.json();
-                subscription_tier = userData.subscription_tier;
-            }
 
             // 2. Fetch Profiles
             const profilesRes = await fetch(`${import.meta.env.VITE_API_URL}/profiles/`, { headers });
@@ -89,7 +88,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setAccount({
                 id: clerkId,
                 email: email,
-                subscription_tier,
                 profiles
             });
 
@@ -140,20 +138,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const selectProfile = (profileId: string) => {
         if (!account) return;
 
-        // Subscription Check for Profile Switching
-        if (account.subscription_tier === 'trial') {
-            // Free tier can only use Main profile (usually the first one created/fetched)
-            // However, logic should be handled in UI gating. Here we just select.
-            // But user asked: "can not switch from default user"
-            // Let's allow selection here but gate in UI or enforce here?
-            // Enforcing here is safer.
-            const targetProfile = account.profiles.find(p => p.id === profileId);
-            if (targetProfile && !targetProfile.is_main) {
-                // Block switching
-                console.warn("Free tier cannot switch profiles");
-                return;
-            }
-        }
+
 
         const profile = account.profiles.find(p => p.id === profileId);
         if (profile) {
@@ -165,11 +150,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const addProfile = async (name: string) => {
         if (!user || !account) return { error: { message: "Not authenticated" } };
 
-        // Gating: Free tier cannot add profiles beyond main (max 1 or similar)
-        // Implemented generic "Max 4" in backend, but free tier might be strict 1.
-        if (account.subscription_tier === 'trial') {
-            return { error: { message: "Upgrade to Premium to create more profiles." } };
-        }
+
 
         try {
             const token = await getToken();

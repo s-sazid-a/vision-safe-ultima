@@ -59,7 +59,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
                     await db.execute(
                         """
                         INSERT INTO users (id, email, full_name, subscription_tier, account_status)
-                        VALUES (?, ?, ?, 'trial', 'active')
+                        VALUES (?, ?, ?, 'standard', 'active')
                         """,
                         (user_id, email, full_name)
                     )
