@@ -22,8 +22,8 @@ const plans = [
     {
         name: "Starter",
         description: "Perfect for small businesses and single locations",
-        monthlyPrice: 99,
-        yearlyPrice: 79,
+        monthlyPrice: 29,
+        yearlyPrice: 299,
         icon: Zap,
         color: "from-cyan-500 to-blue-500",
         features: [
@@ -44,8 +44,8 @@ const plans = [
     {
         name: "Professional",
         description: "For growing organizations with multiple locations",
-        monthlyPrice: 249,
-        yearlyPrice: 199,
+        monthlyPrice: 49,
+        yearlyPrice: 499,
         icon: Building2,
         color: "from-primary to-accent",
         features: [
@@ -153,7 +153,6 @@ const Pricing = () => {
 
     return (
         <Layout>
-            {/* Hero */}
             <section className="py-20 relative">
                 <div className="container mx-auto px-4">
                     <motion.div
@@ -181,7 +180,6 @@ const Pricing = () => {
                             Start with a 14-day free trial. No credit card required.
                         </p>
 
-                        {/* Continue Free Button for Logged In Users */}
                         {account && currentTier === 'trial' && (
                             <div className="mb-8">
                                 <Button variant="outline" onClick={() => navigate('/dashboard')}>
@@ -190,7 +188,6 @@ const Pricing = () => {
                             </div>
                         )}
 
-                        {/* Billing toggle */}
                         <motion.div
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -209,14 +206,13 @@ const Pricing = () => {
                                 Yearly
                             </span>
                             <span className="text-xs font-semibold text-green-500 bg-green-500/10 px-2 py-1 rounded-full">
-                                Save 20%
+                                Save ~15%
                             </span>
                         </motion.div>
                     </motion.div>
                 </div>
             </section>
 
-            {/* Pricing Cards */}
             <section className="py-10 relative">
                 <div className="container mx-auto px-4">
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
@@ -229,7 +225,6 @@ const Pricing = () => {
                                 transition={{ delay: index * 0.15 }}
                                 className={`relative ${plan.popular ? "lg:-mt-4 lg:mb-4" : ""}`}
                             >
-                                {/* Popular badge */}
                                 {plan.popular && (
                                     <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-10">
                                         <div className="px-4 py-1 rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground text-xs font-semibold">
@@ -240,14 +235,11 @@ const Pricing = () => {
 
                                 <motion.div
                                     whileHover={{ y: -8 }}
-                                    className={`h-full glass-card rounded-3xl p-8 relative overflow-hidden ${plan.popular ? "border-primary/50" : ""
-                                        }`}
+                                    className={`h-full glass-card rounded-3xl p-8 relative overflow-hidden ${plan.popular ? "border-primary/50" : ""}`}
                                 >
-                                    {/* Background gradient */}
                                     <div className={`absolute inset-0 bg-gradient-to-br ${plan.color} opacity-5`} />
 
                                     <div className="relative">
-                                        {/* Header */}
                                         <div className="flex items-center gap-3 mb-4">
                                             <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${plan.color} flex items-center justify-center`}>
                                                 <plan.icon className="w-6 h-6 text-white" />
@@ -261,7 +253,6 @@ const Pricing = () => {
                                             {plan.description}
                                         </p>
 
-                                        {/* Price */}
                                         <div className="mb-8">
                                             <AnimatePresence mode="wait">
                                                 {plan.monthlyPrice ? (
@@ -273,12 +264,12 @@ const Pricing = () => {
                                                         transition={{ duration: 0.2 }}
                                                     >
                                                         <span className="text-4xl font-display font-bold">
-                                                            ${isYearly ? plan.yearlyPrice : plan.monthlyPrice}
+                                                            ₹{isYearly ? plan.yearlyPrice : plan.monthlyPrice}
                                                         </span>
-                                                        <span className="text-muted-foreground">/month</span>
+                                                        <span className="text-muted-foreground">/{isYearly ? 'year' : 'month'}</span>
                                                         {isYearly && (
                                                             <p className="text-xs text-muted-foreground mt-1">
-                                                                Billed annually (${(plan.yearlyPrice || 0) * 12}/year)
+                                                                (Billed Annually)
                                                             </p>
                                                         )}
                                                     </motion.div>
@@ -293,12 +284,8 @@ const Pricing = () => {
                                             </AnimatePresence>
                                         </div>
 
-                                        {/* CTA */}
                                         <Button
-                                            className={`w-full h-12 font-semibold mb-8 ${plan.popular
-                                                ? "bg-gradient-to-r from-primary to-accent hover:opacity-90 text-primary-foreground"
-                                                : ""
-                                                }`}
+                                            className={`w-full h-12 font-semibold mb-8 ${plan.popular ? "bg-gradient-to-r from-primary to-accent hover:opacity-90 text-primary-foreground" : ""}`}
                                             variant={plan.popular ? "default" : "outline"}
                                             onClick={() => {
                                                 if (plan.name === "Enterprise" || (account && currentTier === plan.name.toLowerCase())) return;
@@ -312,7 +299,6 @@ const Pricing = () => {
                                             {processing !== plan.name && <ArrowRight className="w-4 h-4 ml-2" />}
                                         </Button>
 
-                                        {/* Features */}
                                         <ul className="space-y-3">
                                             {plan.features.map((feature, i) => (
                                                 <li key={i} className="flex items-center gap-3">
@@ -339,7 +325,6 @@ const Pricing = () => {
                 </div>
             </section>
 
-            {/* Payment Confirmation Dialog */}
             <Dialog open={!!selectedPlan} onOpenChange={(open) => !open && setSelectedPlan(null)}>
                 <DialogContent className="glass-card sm:max-w-[425px]">
                     <DialogHeader>
@@ -359,7 +344,7 @@ const Pricing = () => {
                                     value={promoCode}
                                     onChange={(e) => {
                                         setPromoCode(e.target.value.toUpperCase());
-                                        setPromoStatus('idle'); // Reset status on edit
+                                        setPromoStatus('idle');
                                     }}
                                     className="uppercase tracking-wider font-mono"
                                 />
@@ -383,7 +368,6 @@ const Pricing = () => {
                                 </Button>
                             </div>
 
-                            {/* Validation Messages */}
                             {promoStatus === 'valid' && (
                                 <div className="flex items-center gap-2 text-green-500 text-sm font-bold animate-in fade-in slide-in-from-top-1">
                                     <Check className="w-4 h-4" />
@@ -396,18 +380,17 @@ const Pricing = () => {
                                 </p>
                             )}
 
-                            {/* Price Display */}
                             <div className="mt-4 p-4 bg-muted/20 rounded-lg flex justify-between items-center">
                                 <span className="text-muted-foreground">Total to pay:</span>
                                 <div className="text-right">
                                     {promoStatus === 'valid' ? (
                                         <div className="flex flex-col items-end">
-                                            <span className="text-sm line-through text-muted-foreground">$29.00</span>
-                                            <span className="text-xl font-bold text-green-500">$0.00</span>
+                                            <span className="text-sm line-through text-muted-foreground">₹29.00</span>
+                                            <span className="text-xl font-bold text-green-500">₹0.00</span>
                                         </div>
                                     ) : (
                                         <span className="text-xl font-bold">
-                                            {selectedPlan === 'Starter' ? '$29.00' : selectedPlan === 'Professional' ? '$99.00' : 'Custom'}
+                                            {selectedPlan === 'Starter' ? '₹29.00' : selectedPlan === 'Professional' ? '₹49.00' : 'Custom'}
                                         </span>
                                     )}
                                 </div>
@@ -428,7 +411,6 @@ const Pricing = () => {
                 </DialogContent>
             </Dialog>
 
-            {/* FAQ Teaser */}
             <section className="py-20 relative">
                 <div className="container mx-auto px-4">
                     <motion.div
