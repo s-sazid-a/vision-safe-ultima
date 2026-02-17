@@ -33,6 +33,18 @@ async def get_profiles(current_user: dict = Depends(get_current_user)):
     user_id = current_user['sub'] # Clerk ID
     
     try:
+        # Ensure table exists (self-healing)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS profiles (
+                profile_id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                name TEXT NOT NULL,
+                avatar_url TEXT,
+                is_main INTEGER DEFAULT 0,
+                created_at TEXT DEFAULT (datetime('now'))
+            )
+        """)
+
         # Check if user exists in our DB
         result = await db.execute("SELECT * FROM profiles WHERE user_id = ?", (user_id,))
         rows = result.rows
