@@ -46,6 +46,28 @@ async def get_profiles(current_user: dict = Depends(get_current_user)):
         """)
 
         # Check if user exists in our DB
+        result = await db.execute("SELECT * FROM users WHERE id = ?", (user_id,))
+        if not result.rows:
+            logger.info(f"User {user_id} not found in DB (Webhook might have failed). Auto-creating...")
+            # Try to populate from claims if available, else placeholders
+            # current_user from verify_token might have email if we expanded it, 
+            # but usually it's just 'sub'. dependencies.py will tell us.
+            # Assuming we might not have email/name if it's just a raw JWT verification without userinfo fetch.
+            # We will use placeholders to satisfy NOT NULL constraints.
+            email = current_user.get('email', f"{user_id}@placeholder.com")
+            name = current_user.get('name', "New User")
+            
+            try:
+                await db.execute(
+                    "INSERT INTO users (id, email, full_name, subscription_tier, account_status) VALUES (?, ?, ?, 'trial', 'active')",
+                    (user_id, email, name)
+                )
+            except Exception as e:
+                logger.error(f"Failed to auto-create user: {e}")
+                # We typically can't proceed with creating profile if user insert failed and FK is active.
+                # But let's verify FK status. SQLite enforces it if enabled.
+
+        # Check for profiles again
         result = await db.execute("SELECT * FROM profiles WHERE user_id = ?", (user_id,))
         rows = result.rows
         
@@ -53,12 +75,15 @@ async def get_profiles(current_user: dict = Depends(get_current_user)):
         if not rows:
             logger.info(f"No profiles found for user {user_id}. Creating Default Main Profile.")
             
-            # Try to get user info from 'users' table
-            user_info = await db.execute("SELECT full_name, email FROM users WHERE id = ?", (user_id,))
+            # Use data we just ensured exists
+            name = "Main Account" 
+            # If we just created the user, we used matching name. 
+            # If user existed, we fetch real name.
+             
+            # Try to get user info from 'users' table (source of truth)
+            user_info = await db.execute("SELECT full_name FROM users WHERE id = ?", (user_id,))
             if user_info.rows:
                 name = user_info.rows[0][0] or "Main Account"
-            else:
-                name = "Main Account"
             
             # Insert Main Profile
             # We use user_id as profile_id for the main profile to keep it simple/predictable?
@@ -108,6 +133,20 @@ async def create_profile(profile: ProfileCreate, current_user: dict = Depends(ge
     user_id = current_user['sub']
 
     try:
+        # Self-healing: Ensure user exists
+        user_check = await db.execute("SELECT id FROM users WHERE id = ?", (user_id,))
+        if not user_check.rows:
+            logger.info(f"User {user_id} not found during create_profile. Auto-creating...")
+            email = current_user.get('email', f"{user_id}@placeholder.com")
+            name = current_user.get('name', "New User")
+            try:
+                await db.execute(
+                    "INSERT INTO users (id, email, full_name, subscription_tier, account_status) VALUES (?, ?, ?, 'trial', 'active')",
+                    (user_id, email, name)
+                )
+            except Exception as e:
+                logger.error(f"Failed to auto-create user in create_profile: {e}")
+
         # Check profile count
         count_res = await db.execute("SELECT COUNT(*) FROM profiles WHERE user_id = ?", (user_id,))
         count = count_res.rows[0][0]
