@@ -150,10 +150,26 @@ class VisionSafeInference:
         except ImportError:
             raise ImportError("ultralytics package not installed. Run: pip install ultralytics")
         
-        self.device = device
         self.conf_threshold = conf_threshold
         self.iou_threshold = iou_threshold
         
+        # Reconstruct large model if split parts exist
+        def reconstruct_if_split(model_path):
+            path = Path(model_path)
+            if not path.exists():
+                # Check for parts
+                parts = sorted(path.parent.glob(f"{path.name}.part*"))
+                if parts:
+                    logger.info(f"Reconstructing {model_path} from {len(parts)} parts...")
+                    with open(path, 'wb') as outfile:
+                        for part in parts:
+                            with open(part, 'rb') as infile:
+                                outfile.write(infile.read())
+                    logger.info(f"Reconstruction complete: {path}")
+
+        reconstruct_if_split(str(unsafe_model_path))
+        reconstruct_if_split(str(safe_model_path)) # Just in case
+
         # Load models
         logger.info(f"Loading safe model from: {safe_model_path}")
         self.safe_model = YOLO(safe_model_path)

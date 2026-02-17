@@ -39,9 +39,9 @@ const App = () => (
               <Route path="/pricing" element={<Pricing />} />
               <Route path="/testimonials" element={<Testimonials />} />
               <Route path="/signup" element={<Navigate to="/sign-up" replace />} />
-              <Route path="/sign-up" element={<SignUpPage />} />
+              <Route path="/sign-up/*" element={<SignUpPage />} />
               <Route path="/login" element={<Navigate to="/sign-in" replace />} />
-              <Route path="/sign-in" element={<SignInPage />} />
+              <Route path="/sign-in/*" element={<SignInPage />} />
 
               {/* Protected Dashboard Routes */}
               <Route path="/profiles" element={
